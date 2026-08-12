@@ -1,0 +1,8 @@
+[project]
+name = "fast-api"
+version = "0.1.0"
+description = "FastAPI app deployed on FastAPI Cloud"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.118.0",
+]
