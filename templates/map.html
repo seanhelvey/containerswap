@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% set active_tab = 'map' %}
+{% block title %}{{ t('map.title') }} · {{ settings.site_name }}{% endblock %}
+
+{% block head %}<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">{% endblock %}
+
+{% block content %}
+<div id="map" class="map"
+     data-lat="{{ settings.default_lat }}"
+     data-lng="{{ settings.default_lng }}"
+     data-zoom="{{ settings.default_zoom }}"
+     data-locate-label="{{ t('map.locate') }}">
+  <p class="map-loading">{{ t('map.loading') }}</p>
+</div>
+<p class="hint map-hint">{{ t('map.hint') }}</p>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/vendor/leaflet/leaflet.js" defer></script>
+<script src="/static/js/map.js" defer></script>
+{% endblock %}

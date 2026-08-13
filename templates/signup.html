@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ t('auth.signup_title') }} · {{ settings.site_name }}{% endblock %}
+
+{% block content %}
+<h1 class="page-title">{{ t('auth.signup_title') }}</h1>
+
+{% if error_key %}<p class="alert alert-error">{{ t(error_key) }}</p>{% endif %}
+
+<form class="form" method="post" action="/signup">
+  <label class="field">
+    <span>{{ t('auth.username') }}</span>
+    <input type="text" name="username" value="{{ username|default('') }}" required
+           minlength="3" maxlength="32" autocomplete="username"
+           autocapitalize="none" spellcheck="false">
+  </label>
+  <label class="field">
+    <span>{{ t('auth.password') }}</span>
+    <input type="password" name="password" required minlength="10" autocomplete="new-password">
+    <small class="hint">{{ t('auth.password_hint') }}</small>
+  </label>
+  <p class="hint">{{ t('auth.privacy_note') }}</p>
+  <button class="button button-primary button-block" type="submit">{{ t('auth.signup_cta') }}</button>
+</form>
+
+<p class="hint center">{{ t('auth.have_account') }} <a href="/login">{{ t('auth.login_cta') }}</a></p>
+{% endblock %}

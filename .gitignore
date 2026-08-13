@@ -1,11 +1,42 @@
+# --- Python ---
 __pycache__/
 *.py[cod]
 .venv/
 venv/
-.env
-.fastapicloud/
-.pytest_cache/
-.ruff_cache/
 *.egg-info/
 dist/
 build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- Secrets & runtime data (NEVER commit) ---
+.env
+.env.*
+!.env.example
+data/
+static/uploads/*
+!static/uploads/.gitkeep
+*.db
+*.db-wal
+*.db-shm
+
+# --- Deploy ---
+.fastapicloud/
+
+# --- Editor / OS ---
+.idea
+.vscode
+.DS_Store
+
+# --- Sandbox-mounted host dotfiles (not part of this project) ---
+.bash_profile
+.bashrc
+.gitconfig
+.gitmodules
+.mcp.json
+.profile
+.ripgreprc
+.zprofile
+.zshrc
+.claude

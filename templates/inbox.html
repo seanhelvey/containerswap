@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% set active_tab = 'inbox' %}
+{% block title %}{{ t('inbox.title') }} · {{ settings.site_name }}{% endblock %}
+
+{% block content %}
+<h1 class="page-title">{{ t('inbox.title') }}</h1>
+
+{% if messages %}
+  <ul class="messages">
+    {% for message in messages %}
+      <li class="message">
+        <p class="message-head">
+          <strong>{{ message.sender.username }}</strong>
+          <time datetime="{{ message.created_at.isoformat() }}"></time>
+        </p>
+        <p class="message-body">{{ message.body }}</p>
+        <p class="hint">
+          {{ t('inbox.about') }}
+          <a href="/listings/{{ message.listing_id }}">{{ message.listing.title }}</a>
+        </p>
+      </li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="hint">{{ t('inbox.empty') }}</p>
+{% endif %}
+
+<section class="panel">
+  <h2>{{ t('inbox.my_listings') }}</h2>
+  {% if my_listings %}
+    <ul class="my-listings">
+      {% for listing in my_listings %}
+        <li>
+          <a href="/listings/{{ listing.id }}">{{ listing.title }}</a>
+          {% if listing.status == 'completed' %}
+            <span class="badge badge-done">{{ t('listing.completed_badge') }}</span>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="hint">{{ t('inbox.no_listings') }}</p>
+  {% endif %}
+</section>
+{% endblock %}

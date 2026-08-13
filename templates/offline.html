@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ t('offline.title') }} · {{ settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="empty">
+  <h1 class="page-title">{{ t('offline.title') }}</h1>
+  <p>{{ t('offline.body') }}</p>
+  <a class="button button-primary" href="/">{{ t('error.back_home') }}</a>
+</div>
+{% endblock %}

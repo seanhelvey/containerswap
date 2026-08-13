@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% set active_tab = 'new' %}
+{% block title %}{{ t('listing.new.title') }} · {{ settings.site_name }}{% endblock %}
+
+{% block content %}
+<h1 class="page-title">{{ t('listing.new.title') }}</h1>
+
+{% if error_key %}<p class="alert alert-error">{{ t(error_key) }}</p>{% endif %}
+
+<form class="form" method="post" action="/listings" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+  <!-- Photo first: it is the fastest way to describe a box of jars. -->
+  <label class="photo-picker" for="image">
+    <img id="photo-preview" alt="" hidden>
+    <span class="photo-picker-prompt">
+      <svg viewBox="0 0 24 24" aria-hidden="true" width="40" height="40"><path d="M9 3h6l1.5 2H21a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4.5zm3 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10m0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6"/></svg>
+      <strong>{{ t('listing.new.photo') }}</strong>
+      <small>{{ t('listing.new.photo_hint') }}</small>
+    </span>
+  </label>
+  <input type="file" id="image" name="image" accept="image/*" capture="environment" class="visually-hidden">
+
+  <label class="field">
+    <span>{{ t('listing.title') }}</span>
+    <input type="text" name="title" value="{{ title|default('') }}" required maxlength="120"
+           placeholder="{{ t('listing.title_placeholder') }}" autocomplete="off">
+  </label>
+
+  <div class="field-row">
+    <label class="field">
+      <span>{{ t('listing.quantity') }} <em>{{ t('common.optional') }}</em></span>
+      <input type="text" name="quantity" value="{{ quantity|default('') }}" maxlength="60"
+             placeholder="{{ t('listing.quantity_placeholder') }}" autocomplete="off">
+    </label>
+    <label class="field">
+      <span>{{ t('listing.price') }} <em>{{ t('common.optional') }}</em></span>
+      <input type="text" name="price" value="{{ price|default('') }}" maxlength="60"
+             placeholder="{{ t('listing.price_placeholder') }}" autocomplete="off">
+    </label>
+  </div>
+
+  <label class="field">
+    <span>{{ t('listing.category') }}</span>
+    <select name="category">
+      {% for cat in categories %}
+        <option value="{{ cat }}" {% if category|default('') == cat %}selected{% endif %}>{{ t('category.' ~ cat) }}</option>
+      {% endfor %}
+    </select>
+  </label>
+
+  <label class="field">
+    <span>{{ t('listing.body') }} <em>{{ t('common.optional') }}</em></span>
+    <textarea name="body" rows="3" maxlength="4000"
+              placeholder="{{ t('listing.body_placeholder') }}">{{ body|default('') }}</textarea>
+  </label>
+
+  <fieldset class="field">
+    <legend>{{ t('listing.location') }} <em>{{ t('common.optional') }}</em></legend>
+    <button type="button" class="button button-secondary" id="locate-btn">
+      <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8m9 3h-2.06A7 7 0 0 0 13 5.06V3h-2v2.06A7 7 0 0 0 5.06 11H3v2h2.06A7 7 0 0 0 11 18.94V21h2v-2.06A7 7 0 0 0 18.94 13H21z"/></svg>
+      <span>{{ t('listing.use_my_location') }}</span>
+    </button>
+    <p class="hint" id="locate-status" role="status"></p>
+    <details class="manual-coords">
+      <summary>{{ t('listing.location_manual') }}</summary>
+      <div class="field-row">
+        <input type="text" name="lat" id="lat" inputmode="decimal" placeholder="latitude" autocomplete="off">
+        <input type="text" name="lng" id="lng" inputmode="decimal" placeholder="longitude" autocomplete="off">
+      </div>
+    </details>
+    <p class="hint">{{ t('listing.location_privacy') }}</p>
+  </fieldset>
+
+  {% include "partials/safety.html" %}
+
+  <button class="button button-primary button-block" type="submit">{{ t('listing.submit') }}</button>
+</form>
+{% endblock %}
+
+{% block scripts %}<script src="/static/js/new-listing.js" defer></script>{% endblock %}

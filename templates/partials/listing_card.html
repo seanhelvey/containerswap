@@ -1,0 +1,23 @@
+<a class="card" href="/listings/{{ listing.id }}">
+  <div class="card-media">
+    {% if listing.image_path %}
+      <img src="/uploads/{{ listing.image_path }}" alt="{{ listing.title }}"
+           loading="lazy" decoding="async" width="400" height="300">
+    {% else %}
+      <div class="card-media-empty" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M7 2h10l1 3v15a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5zm1 5v13h8V7z"/></svg>
+      </div>
+    {% endif %}
+    {% if listing.status == 'completed' %}
+      <span class="badge badge-done">{{ t('listing.completed_badge') }}</span>
+    {% endif %}
+  </div>
+  <div class="card-body">
+    <h2 class="card-title">{{ listing.title }}</h2>
+    <p class="card-meta">
+      {% if listing.price %}<span class="pill pill-price">{{ listing.price }}</span>{% endif %}
+      {% if listing.quantity %}<span class="pill">{{ listing.quantity }}</span>{% endif %}
+    </p>
+    <time class="card-date" datetime="{{ listing.created_at.isoformat() }}"></time>
+  </div>
+</a>

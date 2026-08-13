@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ t('error.title') }} · {{ settings.site_name }}{% endblock %}
+
+{% block content %}
+<div class="empty">
+  <h1 class="page-title">{{ status_code }}</h1>
+  <p>{% if status_code == 404 %}{{ t('error.404') }}{% else %}{{ t('error.title') }}{% endif %}</p>
+  <a class="button button-primary" href="/">{{ t('error.back_home') }}</a>
+</div>
+{% endblock %}
