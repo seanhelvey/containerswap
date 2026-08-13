@@ -7,16 +7,34 @@ from fastapi.staticfiles import StaticFiles
 
 from app.auth import get_current_user
 from app.config import BASE_DIR, settings
-from app.db import SessionLocal, init_db
+from app.db import SessionLocal
 from app.routes import account, listings
 from app.templating import render, set_request_language
 
 logger = logging.getLogger("containerswap")
 
 
+def _img_src() -> str:
+    """CSP sources for images.
+
+    Listing photos are served from the object store's own domain in production, so
+    that origin has to be listed or every photo is silently blocked by the browser.
+    Locally they come from /uploads on this origin and 'self' already covers it.
+    """
+    sources = ["'self'", "data:", "blob:", "https://*.tile.openstreetmap.org"]
+    if settings.uses_object_storage:
+        sources.append(settings.supabase_url.rstrip("/"))
+    return " ".join(sources)
+
+
+_IMG_SRC = _img_src()
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    init_db()
+    # No schema work here on purpose. Zero-downtime deploys start several instances
+    # at once, so any create/alter on startup is a race between them. Schema changes
+    # are applied by `alembic upgrade head`, run once before the deploy.
     if settings.secret_is_default and not settings.debug:
         # Loud, because a default signing key means forgeable sessions.
         logger.error(
@@ -58,7 +76,7 @@ async def request_context(request: Request, call_next):
     response.headers.setdefault(
         "Content-Security-Policy",
         "default-src 'self'; "
-        "img-src 'self' data: blob: https://*.tile.openstreetmap.org; "
+        f"img-src {_IMG_SRC}; "
         "script-src 'self'; "
         "style-src 'self' 'unsafe-inline'; "
         "connect-src 'self'; "
@@ -100,9 +118,13 @@ app.include_router(account.router)
 app.include_router(listings.router)
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
-# User uploads live on the data volume, not in the repo.
-settings.upload_dir.mkdir(parents=True, exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=str(settings.upload_dir)), name="uploads")
+
+# Local dev only. In production uploads go to the object store and are served from
+# its own domain, so there is nothing on local disk to mount — and mounting it would
+# be a lie, since the filesystem does not survive a redeploy.
+if not settings.uses_object_storage:
+    settings.upload_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=str(settings.upload_dir)), name="uploads")
 
 
 @app.get("/manifest.webmanifest", include_in_schema=False)

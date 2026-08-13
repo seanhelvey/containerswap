@@ -1,7 +1,7 @@
 <a class="card" href="/listings/{{ listing.id }}">
   <div class="card-media">
     {% if listing.image_path %}
-      <img src="/uploads/{{ listing.image_path }}" alt="{{ listing.title }}"
+      <img src="{{ image_url(listing.image_path) }}" alt="{{ listing.title }}"
            loading="lazy" decoding="async" width="400" height="300">
     {% else %}
       <div class="card-media-empty" aria-hidden="true">

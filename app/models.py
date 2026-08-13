@@ -27,9 +27,11 @@ class User(Base):
     # PUBLIC. Shown on listings and comments.
     display_name: Mapped[str] = mapped_column(String(32), index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
-    # server_default so these can be added to an existing table — see db._add_missing_columns
-    notify_on_message: Mapped[bool] = mapped_column(default=True, server_default=text("1"))
-    is_active: Mapped[bool] = mapped_column(default=True, server_default=text("1"))
+    # server_default so an Alembic add-column backfills existing rows instead of
+    # leaving NULL. `true`, not `1`: Postgres has a real boolean type and rejects the
+    # integer literal that SQLite used to accept.
+    notify_on_message: Mapped[bool] = mapped_column(default=True, server_default=text("true"))
+    is_active: Mapped[bool] = mapped_column(default=True, server_default=text("true"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     listings: Mapped[list["Listing"]] = relationship(back_populates="owner")

@@ -15,9 +15,27 @@ class Settings(BaseSettings):
     secret_key: str = "dev-only-insecure-change-me"  # noqa: S105
     debug: bool = False
 
-    # Runtime data. Must point at a persistent volume in production or uploads and
-    # the database are lost on every redeploy.
+    # Postgres, both locally (docker compose up -d) and in production (Supabase).
+    # In production this must be the *transaction pooler* (port 6543): zero-downtime
+    # deploys run old and new instances at once, and the direct connection's limit is
+    # far too low for that.
+    database_url: str = "postgresql+psycopg://containerswap:localdev@localhost:5433/containerswap"
+    # Alembic runs DDL, which is unreliable through the transaction pooler. Point this
+    # at the *direct* connection (port 5432). Empty == same as database_url, which is
+    # what local dev wants since there is no pooler in front of the container.
+    migration_database_url: str = ""
+
+    # Local scratch space: uploads when no object store is configured, and nothing
+    # else. There is no persistent volume in production, so anything written here is
+    # gone on the next redeploy.
     data_dir: Path = BASE_DIR / "data"
+
+    # Object storage. Unset == write uploads to data_dir, which is the local dev path.
+    # Set all three in production; the service key is server-side only and must never
+    # reach a template or a log line.
+    supabase_url: str = ""
+    supabase_service_key: str = ""
+    storage_bucket: str = "listing-photos"
 
     # Local flavour without forking the code. Empty string == global framing.
     home_region: str = ""
@@ -43,8 +61,24 @@ class Settings(BaseSettings):
         return self.data_dir / "uploads"
 
     @property
-    def db_path(self) -> Path:
-        return self.data_dir / "containerswap.db"
+    def uses_object_storage(self) -> bool:
+        return bool(self.supabase_url and self.supabase_service_key and self.storage_bucket)
+
+    @property
+    def storage_public_base(self) -> str:
+        """Public read URL for the bucket, without a trailing slash.
+
+        The bucket is public on purpose: the home page, the map and
+        /api/listings.geojson all serve listing photos to anonymous visitors, so
+        signed URLs would buy no privacy and cost caching. Photos are safe to expose
+        because images.process_upload strips EXIF, and filenames carry 128 bits of
+        entropy so they cannot be enumerated.
+        """
+        return f"{self.supabase_url.rstrip('/')}/storage/v1/object/public/{self.storage_bucket}"
+
+    @property
+    def alembic_url(self) -> str:
+        return self.migration_database_url or self.database_url
 
     @property
     def secret_is_default(self) -> bool:

@@ -7,12 +7,21 @@ frontend build step. Public repo, so assume anything committed is world-readable
 
 ```bash
 uv sync                    # install
+docker compose up -d       # local Postgres on :5433 — required before serve/test
+uv run alembic upgrade head    # apply migrations
 uv run fastapi dev         # local server on :8000
 uv run pytest -q           # tests
 uv run ruff check . --fix && uv run ruff format .   # lint + format (CI checks both)
 ```
 
-Delete `data/` if the schema changed under you — SQLite dev DBs go stale.
+After changing a model, generate a migration and commit it with the model change:
+
+```bash
+uv run alembic revision --autogenerate -m "what changed"
+```
+
+`tests/test_migrations.py` fails if the two ever drift. To reset the local database,
+`docker compose down -v` — the old "delete `data/`" trick is gone with SQLite.
 
 ## Deployment
 
@@ -26,12 +35,18 @@ must be marked Secret **at creation**; the toggle is not available afterwards.
 
 ## Platform constraints that shape the code
 
-- **No persistent volumes.** SQLite on local disk and `data/uploads` are both wrong
-  in production and will be lost on redeploy. Migrating to Neon or Supabase Postgres
-  plus object storage is the top open task.
+- **No persistent volumes.** Anything written to local disk is lost on redeploy.
+  State lives in Supabase: Postgres for data, Storage for uploaded images. `data/`
+  is local-dev scratch space only.
 - **Zero-downtime deploys run old and new instances at once.** Nothing may assume a
-  single process: the in-memory rate limiter in `app/ratelimit.py` under-counts, and
-  additive-only migrations are the only safe kind (see `db._add_missing_columns`).
+  single process. Consequences: the in-memory rate limiter in `app/ratelimit.py`
+  under-counts and still needs a shared backend; the app does no schema work at
+  startup, so migrations run as a separate step before the deploy; and a migration
+  must leave the *old* code working, since it keeps serving during the rollover.
+- **Connect through the transaction pooler (6543), migrate through the direct
+  connection (5432).** Direct connections are too few for multiple instances, and
+  DDL through the pooler is unreliable. Server-side prepared statements are disabled
+  in `db._make_engine` for the same reason.
 
 ## Non-negotiables
 

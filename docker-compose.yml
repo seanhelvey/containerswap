@@ -1,0 +1,30 @@
+# Local Postgres for development and tests.
+#
+# Production runs Supabase Postgres. Running the same engine locally is the whole
+# point: SQLite silently accepted things Postgres rejects (boolean `1`, loose type
+# coercion), so dialect bugs used to reach production before anyone saw them.
+#
+#   docker compose up -d
+#
+# Port 5433 on the host, so this never fights a system Postgres on 5432.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: containerswap
+      POSTGRES_PASSWORD: localdev
+      POSTGRES_DB: containerswap
+    ports:
+      - "5433:5432"
+    # Data lives in a named volume, so `docker compose down` keeps it and
+    # `docker compose down -v` is the new "delete data/".
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U containerswap"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:

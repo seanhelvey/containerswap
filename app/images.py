@@ -8,10 +8,10 @@ location), and makes the stored filename impossible to influence from the reques
 
 import secrets
 from io import BytesIO
-from pathlib import Path
 
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from app import storage
 from app.config import settings
 
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP", "GIF", "BMP", "TIFF"}
@@ -54,9 +54,7 @@ def process_upload(raw: bytes) -> str:
 
     payload = _compress(clean)
     filename = f"{secrets.token_urlsafe(16)}.jpg"
-    destination = settings.upload_dir / filename
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_bytes(payload)
+    storage.save(payload, filename)
     return filename
 
 
@@ -80,10 +78,4 @@ def _compress(img: Image.Image) -> bytes:
 
 
 def delete_image(filename: str | None) -> None:
-    """Remove a stored image, refusing anything that is not a bare filename."""
-    if not filename:
-        return
-    name = Path(filename).name
-    if name != filename:
-        return
-    (settings.upload_dir / name).unlink(missing_ok=True)
+    storage.delete(filename)

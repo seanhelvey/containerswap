@@ -11,16 +11,35 @@ os.environ["CS_SECRET_KEY"] = "test-secret-key-not-used-in-production"
 os.environ["CS_DEBUG"] = "true"
 
 from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import text  # noqa: E402
 
 from app import ratelimit  # noqa: E402
 from app.db import Base, engine  # noqa: E402
 from main import app  # noqa: E402
 
 
-@pytest.fixture(autouse=True)
-def fresh_db():
+@pytest.fixture(scope="session", autouse=True)
+def schema():
+    """Build the schema once for the whole run.
+
+    Tests use create_all rather than `alembic upgrade head` so a broken migration
+    cannot mask a broken model, and so the suite does not depend on migration
+    ordering. `test_migrations_match_models` is what keeps the two in step.
+    """
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    yield
+    Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(autouse=True)
+def fresh_db(schema):
+    # Truncate rather than drop/create per test: on Postgres the DDL round-trip
+    # dominates the runtime of a suite this size. RESTART IDENTITY keeps generated
+    # ids predictable across tests, CASCADE handles the foreign keys.
+    tables = ", ".join(f'"{table.name}"' for table in Base.metadata.sorted_tables)
+    with engine.begin() as conn:
+        conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
     ratelimit.reset()
     yield
 

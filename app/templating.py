@@ -1,6 +1,7 @@
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
+from app import storage
 from app.config import BASE_DIR, settings
 from app.i18n import DEFAULT_LANG, negotiate, translate
 
@@ -25,6 +26,10 @@ def render(request: Request, template: str, context: dict | None = None, **kwarg
         "t": lambda key, **params: translate(key, lang, **params),
         "settings": settings,
         "categories": CATEGORIES,
+        # Templates must not build upload URLs themselves: the path differs between
+        # local disk and the object store, and hardcoding /uploads/ silently 404s in
+        # production.
+        "image_url": storage.url_for,
         "current_user": getattr(request.state, "user", None),
         "csrf_token": (session or {}).get("csrf", ""),
     }

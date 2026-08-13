@@ -11,6 +11,26 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    # Tests run against real Postgres, matching production. See docker-compose.yml.
+    services:
+      db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: containerswap
+          POSTGRES_PASSWORD: localdev
+          POSTGRES_DB: containerswap
+        ports:
+          - "5433:5432"
+        options: >-
+          --health-cmd "pg_isready -U containerswap"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      CS_DATABASE_URL: postgresql+psycopg://containerswap:localdev@localhost:5433/containerswap
+
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5

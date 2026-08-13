@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app import events, ratelimit
+from app import events, ratelimit, storage
 from app.auth import require_user, verify_csrf
 from app.db import get_db
 from app.geo import fuzz, parse_latlng
@@ -72,7 +73,7 @@ def listings_geojson(db: Session = Depends(get_db)):
                         "quantity": row.quantity,
                         "category": row.category,
                         "url": f"/listings/{row.id}",
-                        "image": f"/uploads/{row.image_path}" if row.image_path else None,
+                        "image": storage.url_for(row.image_path),
                     },
                 }
                 for row in rows
@@ -112,7 +113,10 @@ async def create_listing(
     if image is not None and image.filename:
         raw = await image.read()
         try:
-            image_path = process_upload(raw)
+            # Off the event loop: this decodes and re-encodes a bitmap and then
+            # pushes it to the object store, so it blocks for long enough to stall
+            # every other request on this worker.
+            image_path = await run_in_threadpool(process_upload, raw)
         except ImageRejected as exc:
             return _new_listing_error(request, f"listing.error.image.{exc.args[0]}", locals())
 

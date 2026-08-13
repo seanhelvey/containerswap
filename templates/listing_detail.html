@@ -4,7 +4,7 @@
 {% block content %}
 <article class="detail">
   {% if listing.image_path %}
-    <img class="detail-image" src="/uploads/{{ listing.image_path }}" alt="{{ listing.title }}"
+    <img class="detail-image" src="{{ image_url(listing.image_path) }}" alt="{{ listing.title }}"
          decoding="async" width="800" height="600">
   {% endif %}
 
