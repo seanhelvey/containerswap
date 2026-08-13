@@ -52,6 +52,7 @@
   "listing.error.image.not_an_image": "That file could not be read as an image.",
   "listing.error.image.unsupported_format": "That image format is not supported.",
   "listing.error.image.empty_file": "The image upload was empty.",
+  "listing.error.image.storage_failed": "We could not save that photo just now. Please try again, or post without a photo.",
   "safety.disclaimer": "Clean containers thoroughly before reuse. Use your own judgement about what is safe for storing food.",
   "contact.button": "Contact",
   "contact.title": "Message the person who posted this",

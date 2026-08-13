@@ -53,6 +53,21 @@ class Settings(BaseSettings):
     supabase_service_key: str = ""
     storage_bucket: str = "listing-photos"
 
+    @field_validator("supabase_url")
+    @classmethod
+    def _normalise_supabase_url(cls, value: str) -> str:
+        """Accept a bare host, and never keep a trailing slash.
+
+        The dashboard shows this value without a scheme, so it gets pasted in that
+        way; httpx then rejects the upload URL outright. Both halves of the fix are
+        here because storage.py and the CSP both build strings from this and each
+        would otherwise need its own guard.
+        """
+        value = value.strip().rstrip("/")
+        if value and not value.startswith(("http://", "https://")):
+            value = f"https://{value}"
+        return value
+
     # Local flavour without forking the code. Empty string == global framing.
     home_region: str = ""
 

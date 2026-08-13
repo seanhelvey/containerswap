@@ -204,3 +204,37 @@ def test_security_headers_are_present(client):
 
 def test_healthz(client):
     assert client.get("/healthz").json() == {"status": "ok"}
+
+
+def test_storage_failure_returns_the_form_not_a_500(client, monkeypatch):
+    """A broken object store must not cost the user everything they typed.
+
+    Regression test: a malformed CS_SUPABASE_URL raised httpx.UnsupportedProtocol
+    straight out of the route, which rendered a 500 and discarded the whole form.
+    """
+    from app import storage
+
+    def explode(payload, filename):
+        raise storage.StorageError("simulated outage")
+
+    monkeypatch.setattr(storage, "save", explode)
+
+    register(client, "alice")
+    token = csrf_for(client)
+
+    buffer = BytesIO()
+    Image.new("RGB", (64, 64)).save(buffer, format="JPEG")
+
+    response = client.post(
+        "/listings",
+        data={"csrf_token": token, "title": "Jars with lids", "body": "four of them"},
+        files={"image": ("photo.jpg", buffer.getvalue(), "image/jpeg")},
+        follow_redirects=False,
+    )
+
+    # 400 is what _new_listing_error returns for every form error; the point is that
+    # it re-renders rather than 500-ing.
+    assert response.status_code == 400, response.status_code
+    # Their text survives, so the form can be resubmitted without retyping.
+    assert "Jars with lids" in response.text
+    assert "four of them" in response.text

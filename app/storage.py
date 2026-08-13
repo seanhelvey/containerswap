@@ -31,16 +31,23 @@ def save(payload: bytes, filename: str) -> None:
         destination.write_bytes(payload)
         return
 
-    response = httpx.post(
-        f"{settings.supabase_url.rstrip('/')}/storage/v1/object/{settings.storage_bucket}/{filename}",
-        content=payload,
-        headers={
-            "Authorization": f"Bearer {settings.supabase_service_key}",
-            "Content-Type": "image/jpeg",
-            "Cache-Control": "public, max-age=31536000, immutable",
-        },
-        timeout=_TIMEOUT,
-    )
+    try:
+        response = httpx.post(
+            f"{settings.supabase_url}/storage/v1/object/{settings.storage_bucket}/{filename}",
+            content=payload,
+            headers={
+                "Authorization": f"Bearer {settings.supabase_service_key}",
+                "Content-Type": "image/jpeg",
+                "Cache-Control": "public, max-age=31536000, immutable",
+            },
+            timeout=_TIMEOUT,
+        )
+    except httpx.HTTPError as exc:
+        # Timeouts, DNS failures and malformed URLs all land here. They must not
+        # reach the route as a raw httpx exception: that renders a 500 and the user
+        # loses everything they typed.
+        raise StorageError(f"upload could not be sent: {type(exc).__name__}") from exc
+
     if response.is_error:
         # Deliberately no response body in the message: it can echo the request, and
         # the request carried the service key.

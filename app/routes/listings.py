@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -11,6 +13,8 @@ from app.geo import fuzz, parse_latlng
 from app.images import ImageRejected, process_upload
 from app.models import Comment, Listing, Message, Report, User
 from app.templating import CATEGORIES, render
+
+logger = logging.getLogger("containerswap")
 
 router = APIRouter()
 
@@ -119,6 +123,11 @@ async def create_listing(
             image_path = await run_in_threadpool(process_upload, raw)
         except ImageRejected as exc:
             return _new_listing_error(request, f"listing.error.image.{exc.args[0]}", locals())
+        except storage.StorageError:
+            # Our fault, not theirs, so it is logged rather than explained away — but
+            # they still get the form back with their text intact instead of a 500.
+            logger.exception("listing image upload failed")
+            return _new_listing_error(request, "listing.error.image.storage_failed", locals())
 
     coords = parse_latlng(lat, lng)
     stored_lat, stored_lng = fuzz(*coords) if coords else (None, None)
