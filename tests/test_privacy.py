@@ -5,32 +5,64 @@ from io import BytesIO
 import pytest
 from PIL import Image
 
+from app.db import SessionLocal
 from app.geo import fuzz
 from app.images import ImageRejected, process_upload
 from app.models import User
 from tests.conftest import csrf_for, register
 
-
-def test_user_model_has_no_contact_columns():
-    """The strongest guarantee available: the data simply is not collected."""
-    columns = set(User.__table__.columns.keys())
-    for forbidden in ("email", "phone", "contact", "address"):
-        assert forbidden not in columns
+SECRET_EMAIL = "poster.private.address@example.com"
 
 
-def test_listing_page_never_renders_a_contact_route_for_the_owner(client):
-    register(client, "poster")
+def test_an_email_is_stored_but_never_rendered_on_any_page(client):
+    """The guarantee is about display, not collection. We hold the address so we can
+    notify and recover; no page, API response or error may ever echo it back."""
+    client.post(
+        "/signup",
+        data={
+            "username": "poster",
+            "password": "correct-horse-battery",
+            "email": SECRET_EMAIL,
+        },
+        follow_redirects=False,
+    )
     token = csrf_for(client)
     client.post(
         "/listings",
-        data={"csrf_token": token, "title": "Glass jars", "price": "free"},
+        data={
+            "csrf_token": token,
+            "title": "Glass jars",
+            "price": "free",
+            "lat": "40.8",
+            "lng": "-124.1",
+        },
         follow_redirects=False,
     )
 
-    page = client.get("/listings/1").text
-    # The owner sees admin controls, never a mailto: link or a tel: link.
-    assert "mailto:" not in page
-    assert "tel:" not in page
+    with SessionLocal() as db:
+        stored = db.query(User).filter_by(username="poster").one()
+        assert stored.email == SECRET_EMAIL, "we do keep the address"
+
+    # Signed in as the poster, and as a stranger, and unauthenticated.
+    pages = ["/", "/listings/1", "/inbox", "/map", "/api/listings.geojson"]
+    for path in pages:
+        assert SECRET_EMAIL not in client.get(path).text, f"{path} leaked the address"
+        assert "mailto:" not in client.get(path).text
+
+    client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
+    for path in pages:
+        assert SECRET_EMAIL not in client.get(path).text, f"{path} leaked to anonymous"
+
+
+def test_signup_works_without_an_email(client):
+    response = client.post(
+        "/signup",
+        data={"username": "noemail", "password": "correct-horse-battery", "email": ""},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    with SessionLocal() as db:
+        assert db.query(User).filter_by(username="noemail").one().email is None
 
 
 def test_contact_message_goes_to_the_inbox_not_to_an_address(client):

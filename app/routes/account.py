@@ -8,6 +8,7 @@ from app.auth import (
     clear_session_cookie,
     hash_password,
     issue_session,
+    normalize_email,
     normalize_username,
     require_user,
     set_session_cookie,
@@ -34,21 +35,27 @@ def signup(
     request: Request,
     username: str = Form(""),
     password: str = Form(""),
+    email: str = Form(""),
     db: Session = Depends(get_db),
 ):
     name = normalize_username(username)
-    error = validate_credentials(name, password)
+    address = normalize_email(email)
+    error = validate_credentials(name, password, address)
     if error is None:
         exists = db.execute(select(User).where(User.username == name)).scalar_one_or_none()
         if exists:
             error = "auth.error.username_taken"
 
     if error:
+        # The address is echoed back so a typo does not cost them the whole form.
         return render(
-            request, "signup.html", {"error_key": error, "username": name}, status_code=400
+            request,
+            "signup.html",
+            {"error_key": error, "username": name, "email": address or ""},
+            status_code=400,
         )
 
-    user = User(username=name, password_hash=hash_password(password))
+    user = User(username=name, password_hash=hash_password(password), email=address)
     db.add(user)
     db.commit()
 

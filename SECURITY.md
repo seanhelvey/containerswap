@@ -18,9 +18,10 @@ investigating.
 
 These are the guarantees a vulnerability report should measure us against:
 
-1. **No contact details are stored or published.** There is no email, phone, or
-   address column anywhere in the schema. Any code path that would collect one is a
-   bug, not a feature request.
+1. **Contact details are never published.** Email is optional, and is stored solely
+   to send notifications and account recovery. It must never appear in a rendered
+   page, an API response, or a log line. Any code path that surfaces one user's
+   address to another user is a critical bug.
 2. **Exact locations are never persisted.** Coordinates are jittered before being
    written (`app/geo.py`). A report showing precise coordinates recoverable from the
    database, the API, or the logs is a high-severity issue.
@@ -51,6 +52,7 @@ Stated plainly rather than left for someone to discover:
   coordinate across replicas. Scaling past one worker needs shared storage.
 - **There is no moderation queue.** Reports are written to a table that a maintainer
   has to query by hand.
-- **There is no account recovery.** No email means no password reset — a forgotten
-  password is a lost account. This is the deliberate cost of collecting nothing.
+- **Account recovery is not built yet.** The email column exists but nothing sends
+  mail, so a forgotten password is currently a lost account, and a seller is not yet
+  notified when a message arrives. Both are the next things to build.
 - **Comments and messages are not filtered** for abuse beyond length caps.

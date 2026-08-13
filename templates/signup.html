@@ -18,6 +18,13 @@
     <input type="password" name="password" required minlength="10" autocomplete="new-password">
     <small class="hint">{{ t('auth.password_hint') }}</small>
   </label>
+  <label class="field">
+    <span>{{ t('auth.email') }} <em>{{ t('common.optional') }}</em></span>
+    <input type="email" name="email" value="{{ email|default('') }}" maxlength="255"
+           autocomplete="email" autocapitalize="none" spellcheck="false"
+           aria-describedby="email-why">
+    <small class="hint" id="email-why">{{ t('auth.email_hint') }}</small>
+  </label>
   <p class="hint">{{ t('auth.privacy_note') }}</p>
   <button class="button button-primary button-block" type="submit">{{ t('auth.signup_cta') }}</button>
 </form>

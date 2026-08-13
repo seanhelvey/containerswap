@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -11,15 +11,24 @@ def utcnow() -> datetime:
 
 
 class User(Base):
-    """A user is a username and a password hash. Deliberately no email column:
-    data we never collect is data we can never leak."""
+    """Username, password hash, and an optional email.
+
+    The email is never rendered on any page — it exists so we can tell someone a
+    message is waiting and so they can recover an account. That is the Craigslist
+    model: hold the address, relay through it, never publish it. Signup works
+    without one; the account simply cannot be recovered and stays silent.
+    """
 
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     username: Mapped[str] = mapped_column(String(32), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
-    is_active: Mapped[bool] = mapped_column(default=True)
+    # PRIVATE. Never put this in a template, an API response, or a log line.
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    # server_default so these can be added to an existing table — see db._add_missing_columns
+    notify_on_message: Mapped[bool] = mapped_column(default=True, server_default=text("1"))
+    is_active: Mapped[bool] = mapped_column(default=True, server_default=text("1"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     listings: Mapped[list["Listing"]] = relationship(back_populates="owner")

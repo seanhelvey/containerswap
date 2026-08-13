@@ -1,19 +1,22 @@
 """Username + password auth over a signed cookie session.
 
-DEVIATION FROM SPEC — please read. The brief asked for fastapi-users. fastapi-users is
-built around email as the login identity: its user model declares a unique, non-null
-`email` column and its schemas type it as `EmailStr`. Getting username-only out of it
-means either carrying an email column we promised never to expose, or filling it with
-synthetic addresses like `sean@local` — storing fake PII-shaped data in the one table
-we most want to keep boring. Neither is safer or simpler than the ~90 lines below.
+Login is by username. Email is collected but optional, and is never rendered
+anywhere — it is there so we can tell someone a message is waiting and so they can
+recover an account. Not collecting it at all would be a smaller attack surface, but
+it would also mean a seller never learns a buyer wrote to them, which is the
+difference between a marketplace and a wall of dead listings.
 
-So: argon2 hashing (argon2-cffi, the reference implementation) plus an itsdangerous
-signed session cookie. No email column exists anywhere in the schema. Swapping in
-fastapi-users later is contained to this module and the two account routes — say the
-word and I will do it.
+NOT fastapi-users, deliberately. Its routers are JSON-API shaped: they return
+tokens and JSON errors, where every flow in this app is an HTML form that needs a
+303 and a re-rendered page with an error on it. We would end up writing these two
+routes by hand anyway and using fastapi-users only for the password and token
+helpers below. Its real value — email verification, reset tokens, OAuth providers —
+is worth adopting the day we send our first email, and that swap is contained to
+this module plus app/routes/account.py.
 """
 
 import hmac
+import re
 import secrets
 import unicodedata
 
@@ -56,7 +59,18 @@ def normalize_username(raw: str) -> str:
     return unicodedata.normalize("NFKC", raw or "").strip().lower()
 
 
-def validate_credentials(username: str, password: str) -> str | None:
+def normalize_email(raw: str) -> str | None:
+    """Empty stays empty — an address is optional, and blank is a valid answer."""
+    value = (raw or "").strip().lower()
+    return value or None
+
+
+# Deliberately permissive. The only address that really validates is one that
+# receives mail, so the check here just catches typos and obvious junk.
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$")
+
+
+def validate_credentials(username: str, password: str, email: str | None = None) -> str | None:
     """Returns an i18n error key, or None when the credentials are acceptable."""
     if not (USERNAME_MIN <= len(username) <= USERNAME_MAX):
         return "auth.error.username_length"
@@ -64,6 +78,8 @@ def validate_credentials(username: str, password: str) -> str | None:
         return "auth.error.username_chars"
     if not (PASSWORD_MIN <= len(password) <= PASSWORD_MAX):
         return "auth.error.password_length"
+    if email is not None and (len(email) > 255 or not _EMAIL_RE.match(email)):
+        return "auth.error.email_invalid"
     return None
 
 

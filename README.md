@@ -16,10 +16,13 @@ node_modules. About 40 KB of hand-written CSS and JS on the wire.
 
 These are the decisions worth defending, not implementation trivia:
 
-**Nobody's contact details are ever published.** There is no email column in the
-database at all — signup is username and password only, so there is nothing to leak
-even under a full database compromise. Buyers reach sellers through a contact form
-that writes to a `messages` table, readable only by the recipient at `/inbox`.
+**Nobody's contact details are ever published.** Email is optional at signup and is
+never rendered on any page, in any API response, or in any log line — it exists only
+so we can tell you a message is waiting and let you back into your account. Buyers
+reach sellers through a contact form that writes to a `messages` table, readable only
+by the recipient at `/inbox`. This is the Craigslist model: hold the address, relay
+through it, never publish it. A test asserts a known address never appears in any
+response, signed in or out.
 
 **A pin is a neighbourhood, not a doorstep.** Coordinates are jittered by up to
 400 m before they are written, and the precise value the browser reported is never
