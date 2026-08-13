@@ -32,7 +32,7 @@ jobs:
       CS_DATABASE_URL: postgresql+psycopg://containerswap:localdev@localhost:5433/containerswap
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
