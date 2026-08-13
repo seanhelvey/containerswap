@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,6 +25,21 @@ class Settings(BaseSettings):
     # at the *direct* connection (port 5432). Empty == same as database_url, which is
     # what local dev wants since there is no pooler in front of the container.
     migration_database_url: str = ""
+
+    @field_validator("database_url", "migration_database_url")
+    @classmethod
+    def _force_psycopg3(cls, value: str) -> str:
+        """Pin the driver to psycopg 3, whatever scheme was pasted in.
+
+        Supabase hands out `postgresql://`, and on that bare scheme SQLAlchemy
+        reaches for psycopg2 — which is not installed, so the app dies at import
+        with ModuleNotFoundError. Correcting it here rather than trusting every
+        dashboard field and .env to carry the `+psycopg` suffix.
+        """
+        for prefix in ("postgresql://", "postgres://", "postgresql+psycopg2://"):
+            if value.startswith(prefix):
+                return "postgresql+psycopg://" + value[len(prefix) :]
+        return value
 
     # Local scratch space: uploads when no object store is configured, and nothing
     # else. There is no persistent volume in production, so anything written here is
