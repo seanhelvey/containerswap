@@ -10,7 +10,7 @@
     {% for message in messages %}
       <li class="message">
         <p class="message-head">
-          <strong>{{ message.sender.username }}</strong>
+          <strong>{{ message.sender.display_name }}</strong>
           <time datetime="{{ message.created_at.isoformat() }}"></time>
         </p>
         <p class="message-body">{{ message.body }}</p>

@@ -8,23 +8,29 @@
 
 <form class="form" method="post" action="/signup">
   <label class="field">
-    <span>{{ t('auth.username') }}</span>
-    <input type="text" name="username" value="{{ username|default('') }}" required
-           minlength="3" maxlength="32" autocomplete="username"
-           autocapitalize="none" spellcheck="false">
+    <span>{{ t('auth.email') }}</span>
+    <input type="email" name="email" value="{{ email|default('') }}" required maxlength="255"
+           autocomplete="email" autocapitalize="none" spellcheck="false"
+           aria-describedby="email-why">
+    <small class="hint" id="email-why">{{ t('auth.email_hint') }}</small>
   </label>
   <label class="field">
     <span>{{ t('auth.password') }}</span>
     <input type="password" name="password" required minlength="10" autocomplete="new-password">
     <small class="hint">{{ t('auth.password_hint') }}</small>
   </label>
-  <label class="field">
-    <span>{{ t('auth.email') }} <em>{{ t('common.optional') }}</em></span>
-    <input type="email" name="email" value="{{ email|default('') }}" maxlength="255"
-           autocomplete="email" autocapitalize="none" spellcheck="false"
-           aria-describedby="email-why">
-    <small class="hint" id="email-why">{{ t('auth.email_hint') }}</small>
-  </label>
+
+  <!-- Optional, and last: a generated name is waiting if they skip it. -->
+  <details class="manual-coords">
+    <summary>{{ t('auth.display_name_toggle') }}</summary>
+    <label class="field">
+      <span>{{ t('auth.display_name') }} <em>{{ t('common.optional') }}</em></span>
+      <input type="text" name="display_name" value="{{ display_name|default('') }}"
+             maxlength="32" autocomplete="nickname">
+      <small class="hint">{{ t('auth.display_name_hint') }}</small>
+    </label>
+  </details>
+
   <p class="hint">{{ t('auth.privacy_note') }}</p>
   <button class="button button-primary button-block" type="submit">{{ t('auth.signup_cta') }}</button>
 </form>

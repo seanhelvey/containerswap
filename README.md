@@ -16,9 +16,10 @@ node_modules. About 40 KB of hand-written CSS and JS on the wire.
 
 These are the decisions worth defending, not implementation trivia:
 
-**Nobody's contact details are ever published.** Email is optional at signup and is
-never rendered on any page, in any API response, or in any log line — it exists only
-so we can tell you a message is waiting and let you back into your account. Buyers
+**Nobody's contact details are ever published.** Email is the login identity and is
+never rendered on any page, in any API response, or in any log line. What strangers
+see is `display_name`, a separate public label that we generate at signup so nobody
+has to invent one — signup is two fields with no "that name is taken" dance. Buyers
 reach sellers through a contact form that writes to a `messages` table, readable only
 by the recipient at `/inbox`. This is the Craigslist model: hold the address, relay
 through it, never publish it. A test asserts a known address never appears in any

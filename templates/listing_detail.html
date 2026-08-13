@@ -17,7 +17,7 @@
   </p>
 
   <p class="detail-byline">
-    {{ t('listing.posted_by', username=listing.owner.username) }} ·
+    {{ t("listing.posted_by", name=listing.owner.display_name) }} ·
     <time datetime="{{ listing.created_at.isoformat() }}"></time>
   </p>
 
@@ -77,7 +77,7 @@
       {% for comment in comments %}
         <li>
           <p class="comment-head">
-            <strong>{{ comment.user.username }}</strong>
+            <strong>{{ comment.user.display_name }}</strong>
             <time datetime="{{ comment.created_at.isoformat() }}"></time>
           </p>
           <p>{{ comment.body }}</p>

@@ -11,21 +11,22 @@ def utcnow() -> datetime:
 
 
 class User(Base):
-    """Username, password hash, and an optional email.
+    """Email is the identity. `display_name` is the public label.
 
-    The email is never rendered on any page — it exists so we can tell someone a
-    message is waiting and so they can recover an account. That is the Craigslist
-    model: hold the address, relay through it, never publish it. Signup works
-    without one; the account simply cannot be recovered and stays silent.
+    Two separate jobs that a username was doing badly at once. Email logs you in,
+    receives notifications, and recovers the account — and is never rendered
+    anywhere. `display_name` is what strangers see next to a listing; it is
+    generated at signup so nobody has to invent one, and can be changed later.
     """
 
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    username: Mapped[str] = mapped_column(String(32), unique=True, index=True)
-    password_hash: Mapped[str] = mapped_column(String(255))
     # PRIVATE. Never put this in a template, an API response, or a log line.
-    email: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    # PUBLIC. Shown on listings and comments.
+    display_name: Mapped[str] = mapped_column(String(32), index=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
     # server_default so these can be added to an existing table — see db._add_missing_columns
     notify_on_message: Mapped[bool] = mapped_column(default=True, server_default=text("1"))
     is_active: Mapped[bool] = mapped_column(default=True, server_default=text("1"))

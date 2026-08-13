@@ -1,10 +1,10 @@
-"""Username + password auth over a signed cookie session.
+"""Email + password auth over a signed cookie session.
 
-Login is by username. Email is collected but optional, and is never rendered
-anywhere — it is there so we can tell someone a message is waiting and so they can
-recover an account. Not collecting it at all would be a smaller attack surface, but
-it would also mean a seller never learns a buyer wrote to them, which is the
-difference between a marketplace and a wall of dead listings.
+Signup is two fields. Email is the identity: it logs you in, receives the "someone
+messaged you" mail, and recovers the account — and is never rendered anywhere. The
+public label people see on a listing is `display_name`, which we generate, so there
+is no "that username is taken" dance at the moment someone is deciding whether to
+bother signing up at all.
 
 NOT fastapi-users, deliberately. Its routers are JSON-API shaped: they return
 tokens and JSON errors, where every flow in this app is an HTML form that needs a
@@ -32,7 +32,7 @@ from app.db import get_db
 from app.models import User
 
 SESSION_COOKIE = "cs_session"
-USERNAME_MIN, USERNAME_MAX = 3, 32
+NAME_MIN, NAME_MAX = 2, 32
 PASSWORD_MIN, PASSWORD_MAX = 10, 200
 
 _hasher = PasswordHasher()
@@ -54,15 +54,44 @@ def verify_password(password_hash: str, password: str) -> bool:
     return True
 
 
-def normalize_username(raw: str) -> str:
-    # NFKC first so visually identical usernames cannot be registered twice.
-    return unicodedata.normalize("NFKC", raw or "").strip().lower()
+def normalize_display_name(raw: str) -> str:
+    # NFKC so two visually identical names cannot both be registered.
+    return unicodedata.normalize("NFKC", raw or "").strip()
 
 
-def normalize_email(raw: str) -> str | None:
-    """Empty stays empty — an address is optional, and blank is a valid answer."""
-    value = (raw or "").strip().lower()
-    return value or None
+def normalize_email(raw: str) -> str:
+    return (raw or "").strip().lower()
+
+
+# Deliberately plain words: a generated name should read like a person chose it
+# badly, not like a serial number.
+_NAME_WORDS = (
+    "jar",
+    "crate",
+    "tub",
+    "lid",
+    "basket",
+    "kettle",
+    "spoon",
+    "pantry",
+    "sprout",
+    "basil",
+    "clover",
+    "fern",
+    "cedar",
+    "otter",
+    "heron",
+    "moss",
+)
+
+
+def generate_display_name(taken: set[str]) -> str:
+    """A public label nobody had to invent. Collisions just try again."""
+    for _ in range(50):
+        candidate = f"{secrets.choice(_NAME_WORDS)}-{secrets.randbelow(9000) + 1000}"
+        if candidate not in taken:
+            return candidate
+    return f"swapper-{secrets.token_hex(4)}"
 
 
 # Deliberately permissive. The only address that really validates is one that
@@ -70,16 +99,18 @@ def normalize_email(raw: str) -> str | None:
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$")
 
 
-def validate_credentials(username: str, password: str, email: str | None = None) -> str | None:
+def validate_credentials(email: str, password: str, display_name: str = "") -> str | None:
     """Returns an i18n error key, or None when the credentials are acceptable."""
-    if not (USERNAME_MIN <= len(username) <= USERNAME_MAX):
-        return "auth.error.username_length"
-    if not all(c.isalnum() or c in "._-" for c in username):
-        return "auth.error.username_chars"
+    if not email or len(email) > 255 or not _EMAIL_RE.match(email):
+        return "auth.error.email_invalid"
     if not (PASSWORD_MIN <= len(password) <= PASSWORD_MAX):
         return "auth.error.password_length"
-    if email is not None and (len(email) > 255 or not _EMAIL_RE.match(email)):
-        return "auth.error.email_invalid"
+    if display_name:
+        if not (NAME_MIN <= len(display_name) <= NAME_MAX):
+            return "auth.error.name_length"
+        if "@" in display_name:
+            # Stops someone making their public label look like somebody's address.
+            return "auth.error.name_chars"
     return None
 
 

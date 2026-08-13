@@ -20,9 +20,9 @@ def test_an_email_is_stored_but_never_rendered_on_any_page(client):
     client.post(
         "/signup",
         data={
-            "username": "poster",
-            "password": "correct-horse-battery",
             "email": SECRET_EMAIL,
+            "password": "correct-horse-battery",
+            "display_name": "poster",
         },
         follow_redirects=False,
     )
@@ -40,7 +40,7 @@ def test_an_email_is_stored_but_never_rendered_on_any_page(client):
     )
 
     with SessionLocal() as db:
-        stored = db.query(User).filter_by(username="poster").one()
+        stored = db.query(User).filter_by(display_name="poster").one()
         assert stored.email == SECRET_EMAIL, "we do keep the address"
 
     # Signed in as the poster, and as a stranger, and unauthenticated.
@@ -54,15 +54,14 @@ def test_an_email_is_stored_but_never_rendered_on_any_page(client):
         assert SECRET_EMAIL not in client.get(path).text, f"{path} leaked to anonymous"
 
 
-def test_signup_works_without_an_email(client):
-    response = client.post(
-        "/signup",
-        data={"username": "noemail", "password": "correct-horse-battery", "email": ""},
-        follow_redirects=False,
-    )
-    assert response.status_code == 303
-    with SessionLocal() as db:
-        assert db.query(User).filter_by(username="noemail").one().email is None
+def test_signup_rejects_a_missing_or_malformed_email(client):
+    for address in ("", "not-an-address", "two@@at.example"):
+        response = client.post(
+            "/signup",
+            data={"email": address, "password": "correct-horse-battery"},
+            follow_redirects=False,
+        )
+        assert response.status_code == 400, f"{address!r} should have been rejected"
 
 
 def test_contact_message_goes_to_the_inbox_not_to_an_address(client):
@@ -84,7 +83,7 @@ def test_contact_message_goes_to_the_inbox_not_to_an_address(client):
     )
     assert response.status_code == 303
 
-    # The sender never learns anything about the owner beyond their username.
+    # The sender never learns anything about the owner beyond their display name.
     detail = client.get("/listings/1").text
     assert "mailto:" not in detail
 
@@ -92,7 +91,7 @@ def test_contact_message_goes_to_the_inbox_not_to_an_address(client):
     client.post("/logout", data={"csrf_token": buyer_token}, follow_redirects=False)
     client.post(
         "/login",
-        data={"username": "owner", "password": "correct-horse-battery"},
+        data={"email": "owner@example.com", "password": "correct-horse-battery"},
         follow_redirects=False,
     )
     inbox = client.get("/inbox").text

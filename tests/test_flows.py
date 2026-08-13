@@ -6,7 +6,7 @@ from PIL import Image
 
 from app.config import settings
 from app.db import SessionLocal
-from app.models import EventLog
+from app.models import EventLog, User
 from tests.conftest import csrf_for, register
 
 
@@ -78,15 +78,43 @@ def test_anonymous_visitors_are_sent_to_login(client):
     assert response.headers["location"] == "/login?next=/listings/new"
 
 
-def test_login_does_not_reveal_whether_a_username_exists(client):
+def test_login_does_not_reveal_whether_an_account_exists(client):
     register(client, "alice")
     client.post("/logout", data={"csrf_token": csrf_for(client)}, follow_redirects=False)
 
-    known = client.post("/login", data={"username": "alice", "password": "wrong-password"})
-    unknown = client.post("/login", data={"username": "nobody", "password": "wrong-password"})
+    known = client.post("/login", data={"email": "alice@example.com", "password": "wrong-password"})
+    unknown = client.post(
+        "/login", data={"email": "nobody@example.com", "password": "wrong-password"}
+    )
     assert known.status_code == unknown.status_code == 401
-    assert "Wrong username or password." in known.text
-    assert known.text == unknown.text.replace("nobody", "alice")
+    assert "Wrong email or password." in known.text
+    assert known.text == unknown.text.replace("nobody@example.com", "alice@example.com")
+
+
+def test_signup_needs_only_an_email_and_password(client):
+    """Two fields. No name to invent, no 'that one is taken'."""
+    response = client.post(
+        "/signup",
+        data={"email": "Someone@Example.com", "password": "correct-horse-battery"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    with SessionLocal() as db:
+        user = db.query(User).filter_by(email="someone@example.com").one()
+        assert user.display_name, "a public name should have been generated"
+        assert "@" not in user.display_name
+
+
+def test_email_is_case_insensitive_at_login(client):
+    register(client, "alice")
+    client.post("/logout", data={"csrf_token": csrf_for(client)}, follow_redirects=False)
+    response = client.post(
+        "/login",
+        data={"email": "ALICE@example.com", "password": "correct-horse-battery"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
 
 
 def test_open_redirect_is_blocked_on_login(client):
@@ -94,7 +122,11 @@ def test_open_redirect_is_blocked_on_login(client):
     client.post("/logout", data={"csrf_token": csrf_for(client)}, follow_redirects=False)
     response = client.post(
         "/login",
-        data={"username": "alice", "password": "correct-horse-battery", "next": "//evil.example"},
+        data={
+            "email": "alice@example.com",
+            "password": "correct-horse-battery",
+            "next": "//evil.example",
+        },
         follow_redirects=False,
     )
     assert response.headers["location"] == "/"

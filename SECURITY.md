@@ -49,7 +49,12 @@ Stated plainly rather than left for someone to discover:
 
 - **Rate limiting is per-process and in memory** (`app/ratelimit.py`). It blunts
   casual abuse from a single IP; it does not survive a restart and does not
-  coordinate across replicas. Scaling past one worker needs shared storage.
+  coordinate across replicas. FastAPI Cloud does zero-downtime deploys, which means
+  old and new instances run at once — so the real limit is already looser than the
+  numbers in `LIMITS` suggest. Needs Redis to be accurate.
+- **SQLite on local disk is wrong for this platform.** FastAPI Cloud has no
+  persistent volumes, and concurrent instances do not share a filesystem. Until this
+  moves to Postgres, treat all data as disposable and do not invite real users.
 - **There is no moderation queue.** Reports are written to a table that a maintainer
   has to query by hand.
 - **Account recovery is not built yet.** The email column exists but nothing sends

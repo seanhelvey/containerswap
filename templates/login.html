@@ -9,9 +9,9 @@
 <form class="form" method="post" action="/login">
   <input type="hidden" name="next" value="{{ next|default('/') }}">
   <label class="field">
-    <span>{{ t('auth.username') }}</span>
-    <input type="text" name="username" value="{{ username|default('') }}" required
-           autocomplete="username" autocapitalize="none" spellcheck="false">
+    <span>{{ t('auth.email') }}</span>
+    <input type="email" name="email" value="{{ email|default('') }}" required
+           autocomplete="email" autocapitalize="none" spellcheck="false">
   </label>
   <label class="field">
     <span>{{ t('auth.password') }}</span>

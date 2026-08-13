@@ -36,9 +36,12 @@ def upload_dir() -> Path:
     return Path(_TMP) / "uploads"
 
 
-def register(client: TestClient, username: str, password: str = "correct-horse-battery") -> None:
+def register(client: TestClient, name: str, password: str = "correct-horse-battery") -> None:
+    """Register `name` with a matching address, so tests can talk about people by name."""
     response = client.post(
-        "/signup", data={"username": username, "password": password}, follow_redirects=False
+        "/signup",
+        data={"email": f"{name}@example.com", "password": password, "display_name": name},
+        follow_redirects=False,
     )
     assert response.status_code == 303, response.text
 
