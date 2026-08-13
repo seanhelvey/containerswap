@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Pushing main deploys to production and CI does not gate the deploy.
+# This is the last thing standing between a red test and real users.
+set -euo pipefail
+
+branch="$(git rev-parse --abbrev-ref HEAD)"
+[ "$branch" = "main" ] || exit 0
+
+echo "pre-push: main deploys on push — running checks"
+uv run ruff check . || { echo "pre-push: lint failed"; exit 1; }
+uv run pytest -q || { echo "pre-push: tests failed"; exit 1; }
+echo "pre-push: ok"
