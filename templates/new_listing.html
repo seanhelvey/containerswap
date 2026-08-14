@@ -57,18 +57,27 @@
 
   <fieldset class="field">
     <legend>{{ t('listing.location') }} <em>{{ t('common.optional') }}</em></legend>
-    <button type="button" class="button button-secondary" id="locate-btn">
+    <button type="button" class="button button-secondary" id="locate-btn"
+            data-ok-label="{{ t('listing.location_set') }}"
+            data-fail-label="{{ t('listing.location_denied') }}">
       <svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8m9 3h-2.06A7 7 0 0 0 13 5.06V3h-2v2.06A7 7 0 0 0 5.06 11H3v2h2.06A7 7 0 0 0 11 18.94V21h2v-2.06A7 7 0 0 0 18.94 13H21z"/></svg>
       <span>{{ t('listing.use_my_location') }}</span>
     </button>
     <p class="hint" id="locate-status" role="status"></p>
-    <details class="manual-coords">
-      <summary>{{ t('listing.location_manual') }}</summary>
-      <div class="field-row">
-        <input type="text" name="lat" id="lat" inputmode="decimal" placeholder="latitude" autocomplete="off">
-        <input type="text" name="lng" id="lng" inputmode="decimal" placeholder="longitude" autocomplete="off">
-      </div>
-    </details>
+
+    {# Coordinates are never typed: people do not know their latitude. The button
+       above is the fast path, this map is the fallback when it is declined, and the
+       fields behind it stay hidden and machine-written. #}
+    <p class="hint">{{ t('listing.location_pick') }}</p>
+    <div id="pick-map"
+         class="pick-map"
+         data-lat="{{ lat|default('') }}"
+         data-lng="{{ lng|default('') }}"
+         data-default-lat="{{ settings.default_lat }}"
+         data-default-lng="{{ settings.default_lng }}"
+         data-default-zoom="{{ settings.default_zoom }}"></div>
+    <input type="hidden" name="lat" id="lat" value="{{ lat|default('') }}">
+    <input type="hidden" name="lng" id="lng" value="{{ lng|default('') }}">
     <p class="hint">{{ t('listing.location_privacy') }}</p>
   </fieldset>
 
@@ -78,4 +87,9 @@
 </form>
 {% endblock %}
 
-{% block scripts %}<script src="/static/js/new-listing.js" defer></script>{% endblock %}
+{% block head %}<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">{% endblock %}
+
+{% block scripts %}
+<script src="/static/vendor/leaflet/leaflet.js" defer></script>
+<script src="/static/js/new-listing.js" defer></script>
+{% endblock %}

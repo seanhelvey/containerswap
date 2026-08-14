@@ -21,7 +21,16 @@ def _img_src() -> str:
     that origin has to be listed or every photo is silently blocked by the browser.
     Locally they come from /uploads on this origin and 'self' already covers it.
     """
-    sources = ["'self'", "data:", "blob:", "https://*.tile.openstreetmap.org"]
+    # Both forms: the bare host is what the tile URLs in static/js actually use, and
+    # a `*.` wildcard does not match it. Without the bare entry every tile is blocked
+    # and the map renders as an empty grey box.
+    sources = [
+        "'self'",
+        "data:",
+        "blob:",
+        "https://tile.openstreetmap.org",
+        "https://*.tile.openstreetmap.org",
+    ]
     if settings.uses_object_storage:
         sources.append(settings.supabase_url.rstrip("/"))
     return " ".join(sources)

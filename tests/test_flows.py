@@ -238,3 +238,30 @@ def test_storage_failure_returns_the_form_not_a_500(client, monkeypatch):
     # Their text survives, so the form can be resubmitted without retyping.
     assert "Jars with lids" in response.text
     assert "four of them" in response.text
+
+
+def test_new_listing_offers_a_map_not_coordinate_boxes(client):
+    """Nobody knows their own latitude, so the form must never ask for it."""
+    register(client, "alice")
+    page = client.get("/listings/new").text
+
+    assert 'id="pick-map"' in page, "the location picker map is missing"
+    assert 'type="hidden" name="lat"' in page, "lat should be machine-written, not typed"
+    assert 'type="hidden" name="lng"' in page, "lng should be machine-written, not typed"
+    assert "latitude" not in page, "a visible latitude input is back"
+    assert "leaflet.js" in page, "picker needs Leaflet loaded on this page"
+
+
+def test_csp_allows_the_tile_host_the_javascript_actually_uses(client):
+    """Regression: `*.tile.openstreetmap.org` does not match the bare host, so every
+    tile was blocked and the map rendered as an empty grey box."""
+    from pathlib import Path
+
+    csp = client.get("/").headers["Content-Security-Policy"]
+    img_src = next(part for part in csp.split(";") if part.strip().startswith("img-src"))
+
+    for js in ("map.js", "mini-map.js", "new-listing.js"):
+        source = Path("static/js", js).read_text()
+        if "tile.openstreetmap.org" not in source:
+            continue
+        assert "https://tile.openstreetmap.org" in img_src, f"{js} tiles blocked by CSP"

@@ -181,7 +181,11 @@ textarea { min-height: 88px; resize: vertical; }
 .photo-picker-prompt strong { color: var(--ink); font-size: 17px; }
 .photo-picker-prompt small { max-width: 30ch; }
 
+/* Location picker on the new-listing form. Tall enough to actually aim at on a
+   phone; nobody can place a pin accurately in a 200px strip. */
 .manual-coords summary { min-height: 44px; display: flex; align-items: center; color: var(--green); }
+.pick-map { height: 260px; border-radius: var(--radius); margin: 8px 0 4px; background: var(--bg); }
+.pick-map .leaflet-container { border-radius: var(--radius); }
 
 .button {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
