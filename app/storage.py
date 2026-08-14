@@ -12,6 +12,10 @@ photos safe to publish is upstream, in images.process_upload, which rebuilds eve
 image from raw pixels and so cannot carry EXIF GPS.
 """
 
+import base64
+import binascii
+import json
+
 import httpx
 
 from app.config import settings
@@ -22,6 +26,34 @@ _TIMEOUT = httpx.Timeout(15.0, connect=5.0)
 
 class StorageError(Exception):
     """The object store rejected a write or delete."""
+
+
+def describe_key() -> str:
+    """Name the *kind* of key configured, never the key itself.
+
+    Uploads write a row into storage.objects, which is under row-level security.
+    Only service_role bypasses that, so an anon or publishable key fails with
+    "new row violates row-level security policy" — an error that says nothing about
+    which key is loaded. The role sits in the JWT payload, which is not a secret:
+    it is base64, not encryption, and the signature is what makes the key usable.
+    """
+    key = settings.supabase_service_key
+    if not key:
+        return "missing"
+    if key.startswith("sb_publishable_"):
+        return "publishable (cannot write — this is the anon-equivalent key)"
+    if key.startswith("sb_secret_"):
+        return "sb_secret_ (new-style secret key)"
+
+    parts = key.split(".")
+    if len(parts) != 3:
+        return "unrecognised format"
+    try:
+        segment = parts[1] + "=" * (-len(parts[1]) % 4)
+        role = json.loads(base64.urlsafe_b64decode(segment)).get("role")
+    except (ValueError, binascii.Error):
+        return "malformed JWT"
+    return f"JWT role={role!r}"
 
 
 def save(payload: bytes, filename: str) -> None:

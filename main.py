@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from app import storage
 from app.auth import get_current_user
 from app.config import BASE_DIR, settings
 from app.db import SessionLocal
@@ -55,6 +56,15 @@ async def lifespan(_: FastAPI):
                 "will fail. Expected something like https://<project-ref>.supabase.co",
                 settings.supabase_url,
             )
+        # Which key is loaded, not the key. Uploads are blocked by row-level security
+        # unless this is service_role, and that failure names neither the key nor the
+        # role, so without this the only way to tell them apart is trial and error.
+        logger.info(
+            "storage: bucket=%r host=%s key=%s",
+            settings.storage_bucket,
+            host,
+            storage.describe_key(),
+        )
 
     if settings.secret_is_default and not settings.debug:
         # Loud, because a default signing key means forgeable sessions.
