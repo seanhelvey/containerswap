@@ -55,9 +55,16 @@ def save(payload: bytes, filename: str) -> None:
         ) from exc
 
     if response.is_error:
-        # Deliberately no response body in the message: it can echo the request, and
-        # the request carried the service key.
-        raise StorageError(f"upload failed with {response.status_code}")
+        # The body is the only thing that distinguishes a missing bucket from a
+        # rejected MIME type from a bad key, and Supabase returns a small JSON error
+        # object that never echoes request headers — so it is safe to log and the
+        # only way to diagnose this without another deploy. Truncated in case a
+        # future error page is larger than expected.
+        detail = response.text[:300].replace("\n", " ")
+        raise StorageError(
+            f"upload to bucket {settings.storage_bucket!r} failed with "
+            f"{response.status_code}: {detail}"
+        )
 
 
 def delete(filename: str | None) -> None:
