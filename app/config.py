@@ -6,6 +6,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Module-level so tests can derive their own database name from it without
+# duplicating the literal and letting the two drift apart.
+DEFAULT_DATABASE_URL = "postgresql+psycopg://containerswap:localdev@localhost:5433/containerswap"
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_prefix="CS_", extra="ignore")
@@ -20,7 +24,7 @@ class Settings(BaseSettings):
     # In production this must be the *transaction pooler* (port 6543): zero-downtime
     # deploys run old and new instances at once, and the direct connection's limit is
     # far too low for that.
-    database_url: str = "postgresql+psycopg://containerswap:localdev@localhost:5433/containerswap"
+    database_url: str = DEFAULT_DATABASE_URL
     # Alembic runs DDL, which is unreliable through the transaction pooler. Point this
     # at the *direct* connection (port 5432). Empty == same as database_url, which is
     # what local dev wants since there is no pooler in front of the container.

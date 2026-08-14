@@ -23,6 +23,10 @@ uv run alembic revision --autogenerate -m "what changed"
 `tests/test_migrations.py` fails if the two ever drift. To reset the local database,
 `docker compose down -v` — the old "delete `data/`" trick is gone with SQLite.
 
+The suite runs against `containerswap_test`, a separate database it creates on first
+run, because it drops and truncates tables wholesale. Never point it at the database
+you are developing against.
+
 ## Deployment
 
 **Pushing to `main` deploys to production.** FastAPI Cloud's GitHub integration builds

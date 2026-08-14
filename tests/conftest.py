@@ -1,8 +1,11 @@
+import importlib
 import os
 import tempfile
 from pathlib import Path
 
 import pytest
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine.url import make_url
 
 # Point the app at a throwaway data directory before anything imports settings.
 _TMP = tempfile.mkdtemp(prefix="containerswap-tests-")
@@ -10,12 +13,44 @@ os.environ["CS_DATA_DIR"] = _TMP
 os.environ["CS_SECRET_KEY"] = "test-secret-key-not-used-in-production"
 os.environ["CS_DEBUG"] = "true"
 
+import app.config  # noqa: E402
+
+
+def _use_a_separate_test_database() -> None:
+    """Redirect the suite onto `<database>_test`, creating it if needed.
+
+    The suite drops and truncates tables wholesale. Pointed at the development
+    database that wipes the data you were working with, which is exactly what
+    happened before this existed. The dev database and the test database must be
+    different databases, not merely different rows.
+    """
+    configured = os.environ.get("CS_DATABASE_URL") or app.config.DEFAULT_DATABASE_URL
+    url = make_url(configured)
+    test_url = url.set(database=f"{url.database}_test")
+
+    # CREATE DATABASE cannot run inside a transaction, hence AUTOCOMMIT.
+    admin = create_engine(url, isolation_level="AUTOCOMMIT")
+    with admin.connect() as conn:
+        exists = conn.execute(
+            text("SELECT 1 FROM pg_database WHERE datname = :name"),
+            {"name": test_url.database},
+        ).scalar()
+        if not exists:
+            conn.execute(text(f'CREATE DATABASE "{test_url.database}"'))
+    admin.dispose()
+
+    os.environ["CS_DATABASE_URL"] = test_url.render_as_string(hide_password=False)
+    # settings is built at import time, so rebuild it before anything reads it.
+    importlib.reload(app.config)
+
+
+_use_a_separate_test_database()
+
 from fastapi.testclient import TestClient  # noqa: E402
-from sqlalchemy import text  # noqa: E402
 
 from app import ratelimit  # noqa: E402
 from app.db import Base, engine  # noqa: E402
-from main import app  # noqa: E402
+from main import app as fastapi_app  # noqa: E402
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -46,7 +81,7 @@ def fresh_db(schema):
 
 @pytest.fixture
 def client():
-    with TestClient(app) as c:
+    with TestClient(fastapi_app) as c:
         yield c
 
 
