@@ -59,7 +59,9 @@ async def lifespan(_: FastAPI):
         # Which key is loaded, not the key. Uploads are blocked by row-level security
         # unless this is service_role, and that failure names neither the key nor the
         # role, so without this the only way to tell them apart is trial and error.
-        logger.info(
+        # warning, not info: under uvicorn this logger inherits the root level, so an
+        # info line is silently dropped and the diagnostic never appears.
+        logger.warning(
             "storage: bucket=%r host=%s key=%s",
             settings.storage_bucket,
             host,
