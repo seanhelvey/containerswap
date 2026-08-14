@@ -51,10 +51,13 @@ One deployment can be grassroots without the codebase being parochial.
 
 ```bash
 uv sync
-docker compose up -d          # Postgres on :5433
-uv run alembic upgrade head
+make up                       # Postgres on :5433, then migrate
 uv run fastapi dev
 ```
+
+`make up` is the one shortcut — starting the container, waiting for it and migrating
+has to happen in that order. Tests, lint and the server run the ordinary way:
+`uv run pytest`, `uv run ruff check .`, `uv run fastapi dev`.
 
 Open http://127.0.0.1:8000. Tests: `uv run pytest`. Lint: `uv run ruff check .`
 

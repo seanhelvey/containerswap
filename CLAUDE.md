@@ -7,12 +7,18 @@ frontend build step. Public repo, so assume anything committed is world-readable
 
 ```bash
 uv sync                    # install
-docker compose up -d       # local Postgres on :5433 — required before serve/test
-uv run alembic upgrade head    # apply migrations
+make up                    # Postgres on :5433, wait for it, apply migrations
 uv run fastapi dev         # local server on :8000
 uv run pytest -q           # tests
 uv run ruff check . --fix && uv run ruff format .   # lint + format (CI checks both)
 ```
+
+`make up` is the only shortcut, because starting the container, waiting for it and
+migrating is three steps that must happen in order. Everything else runs the ordinary
+way. `make` on its own lists the rest (`down`, `reset`, `psql`, `logs`).
+
+Postgres must be running before `pytest` or `fastapi dev`, or both fail with
+`connection refused`.
 
 After changing a model, generate a migration and commit it with the model change:
 
@@ -21,7 +27,7 @@ uv run alembic revision --autogenerate -m "what changed"
 ```
 
 `tests/test_migrations.py` fails if the two ever drift. To reset the local database,
-`docker compose down -v` — the old "delete `data/`" trick is gone with SQLite.
+`make reset` — the old "delete `data/`" trick is gone with SQLite.
 
 The suite runs against `containerswap_test`, a separate database it creates on first
 run, because it drops and truncates tables wholesale. Never point it at the database
