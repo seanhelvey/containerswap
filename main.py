@@ -44,6 +44,18 @@ async def lifespan(_: FastAPI):
     # No schema work here on purpose. Zero-downtime deploys start several instances
     # at once, so any create/alter on startup is a race between them. Schema changes
     # are applied by `alembic upgrade head`, run once before the deploy.
+    # A bad storage URL otherwise stays invisible until the first person tries to
+    # post a photo, and then it surfaces as a failed upload rather than as the
+    # configuration mistake it is. Cheap to check here instead.
+    if settings.uses_object_storage:
+        host = settings.supabase_url.removeprefix("https://").removeprefix("http://")
+        if "." not in host or " " in host:
+            logger.error(
+                "CS_SUPABASE_URL does not look like a hostname (%r). Photo uploads "
+                "will fail. Expected something like https://<project-ref>.supabase.co",
+                settings.supabase_url,
+            )
+
     if settings.secret_is_default and not settings.debug:
         # Loud, because a default signing key means forgeable sessions.
         logger.error(
