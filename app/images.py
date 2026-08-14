@@ -75,7 +75,3 @@ def _compress(img: Image.Image) -> bytes:
     buffer = BytesIO()
     smaller.save(buffer, format="JPEG", quality=45, optimize=True, progressive=True)
     return buffer.getvalue()
-
-
-def delete_image(filename: str | None) -> None:
-    storage.delete(filename)

@@ -112,28 +112,6 @@ def save(payload: bytes, filename: str) -> None:
         )
 
 
-def delete(filename: str | None) -> None:
-    """Remove a stored image, refusing anything that is not a bare filename."""
-    if not filename or "/" in filename or "\\" in filename or filename.startswith("."):
-        return
-
-    if not settings.uses_object_storage:
-        (settings.upload_dir / filename).unlink(missing_ok=True)
-        return
-
-    # A failed delete leaves an orphaned object, which is untidy but harmless — never
-    # worth failing the user's request over, so this does not raise.
-    try:
-        httpx.request(
-            "DELETE",
-            f"{settings.supabase_url.rstrip('/')}/storage/v1/object/{settings.storage_bucket}/{filename}",
-            headers=_auth_headers(),
-            timeout=_TIMEOUT,
-        )
-    except httpx.HTTPError:
-        pass
-
-
 def url_for(filename: str | None) -> str | None:
     """Public URL for a stored image, or None when the listing has no photo."""
     if not filename:

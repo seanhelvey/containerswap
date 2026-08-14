@@ -25,11 +25,13 @@
   });
 })();
 
-// PWA: offline access to listings already visited.
+// The PWA layer is gone, but earlier visitors still have its service worker
+// installed. Registering once more hands them the tombstone in static/js/sw.js,
+// which clears the caches and unregisters itself. Without this they keep being
+// served whatever their old worker cached. Remove once that has had time to reach
+// everyone.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      /* offline support is a bonus, never a requirement */
-    });
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
   });
 }

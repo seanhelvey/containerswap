@@ -7,7 +7,7 @@ yogurt pots — that would otherwise go in the bin. Mobile-first, low-bandwidth,
 installable, and built to work as well on a cheap phone in Nairobi as on a laptop in
 Arcata.
 
-Server-rendered FastAPI + Jinja2 + SQLite. No frontend build step, no bundler, no
+Server-rendered FastAPI + Jinja2 + Postgres. No frontend build step, no bundler, no
 node_modules. About 40 KB of hand-written CSS and JS on the wire.
 
 ---
@@ -51,35 +51,76 @@ One deployment can be grassroots without the codebase being parochial.
 
 ```bash
 uv sync
-cp .env.example .env
+docker compose up -d          # Postgres on :5433
+uv run alembic upgrade head
 uv run fastapi dev
 ```
 
 Open http://127.0.0.1:8000. Tests: `uv run pytest`. Lint: `uv run ruff check .`
 
-## Deploy
+No `.env` is needed: the defaults point at the Docker database, and with no object
+store configured uploads go to `data/uploads` and are served from `/uploads`. Local
+development never touches production storage.
+
+Tests run against a separate `containerswap_test` database, created on first run,
+because the suite drops and truncates tables wholesale. To reset development data,
+`docker compose down -v`.
+
+After changing a model, generate a migration and commit it alongside:
 
 ```bash
-uv run fastapi login    # once
-uv run fastapi deploy
+uv run alembic revision --autogenerate -m "what changed"
 ```
 
-Then, in the FastAPI Cloud dashboard, set these environment variables:
+`tests/test_migrations.py` fails if the models and migrations ever drift apart.
+
+## Deploy
+
+Pushing to `main` deploys. FastAPI Cloud builds the default branch automatically, and
+CI does not gate it — a red build still ships, so run the tests before you push. The
+`.githooks/pre-push` hook enforces that, plus one thing CI cannot check: that
+production's schema is already at the repo's migration head.
+
+**Migrate before you push.** There is no release phase, so the new code starts serving
+the moment the push lands. Applying migrations first is safe because they are additive
+and the old instances keep working through the rollover:
+
+```bash
+CS_MIGRATION_DATABASE_URL='postgresql+psycopg://...:5432/postgres' uv run alembic upgrade head
+git push origin main
+```
+
+Environment variables, set in the FastAPI Cloud dashboard. Anything secret must be
+marked Secret **at creation** — the toggle disappears afterwards:
 
 | Variable | Value |
 | --- | --- |
 | `CS_SECRET_KEY` | `python -c "import secrets; print(secrets.token_urlsafe(48))"` |
 | `CS_DEBUG` | `false` |
-| `CS_DATA_DIR` | a path on a persistent volume (see below) |
+| `CS_DATABASE_URL` | Supabase **transaction pooler**, port 6543 |
+| `CS_SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `CS_SUPABASE_SERVICE_KEY` | a **secret** key — publishable and anon cannot write |
+| `CS_RESEND_API_KEY` | Resend API key; without it nobody is told they have a message |
+| `CS_EMAIL_FROM` | an address on a domain verified with Resend |
+| `CS_REPORT_EMAIL` | where abuse reports go |
+| `CS_SITE_URL` | `https://…` — used for links in emails |
 | `CS_HOME_REGION` | e.g. `Humboldt County`, or leave empty |
 
-### ⚠️ Persistence
+`CS_STORAGE_BUCKET` defaults to `listing-photos`; the bucket must be public, since
+listing photos are served to signed-out visitors and signed URLs would defeat caching
+without adding privacy.
 
-SQLite and uploaded images both live under `CS_DATA_DIR`. If that path is on an
-ephemeral container filesystem, **every redeploy wipes all listings and photos.**
-Point it at a persistent volume before inviting real users. Migrating later means
-Postgres for the database and object storage for images; `app/db.py` and
-`app/images.py` are the only two files that would change.
+### Why the pooler
+
+Zero-downtime deploys run old and new instances at once, and Supabase's direct
+connection allows far too few connections for that — so the app connects through the
+transaction pooler on 6543. Server-side prepared statements are disabled to suit it.
+Migrations are the exception: DDL through the transaction pooler is unreliable, so
+`CS_MIGRATION_DATABASE_URL` should point at the direct or session connection on 5432.
+
+Nothing may assume a single process. Additive-only migrations are the only safe kind,
+the app does no schema work at startup, and the in-memory rate limiter in
+`app/ratelimit.py` under-counts across instances — it still needs a shared backend.
 
 ## Layout
 
@@ -90,11 +131,14 @@ app/models.py        users, listings, messages, comments, reports, event_log
 app/auth.py          argon2 + signed-cookie sessions + CSRF
 app/geo.py           coordinate fuzzing
 app/images.py        upload validation, EXIF stripping, compression
+app/storage.py       where processed images go: local disk or object store
 app/i18n.py          translation lookup
 app/routes/          account.py, listings.py
+migrations/          Alembic; versions/ holds the schema history
 templates/           Jinja2, mobile-first
 static/              css, js, vendored Leaflet, icons
 locales/en.json      every user-facing string
+docker-compose.yml   local Postgres for development and tests
 ```
 
 ## Analytics

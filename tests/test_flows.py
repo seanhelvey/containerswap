@@ -132,18 +132,100 @@ def test_open_redirect_is_blocked_on_login(client):
     assert response.headers["location"] == "/"
 
 
-def test_comments_are_public_and_attributed(client):
+def test_contacting_an_owner_notifies_them(client, monkeypatch):
+    """The inbox is not enough on its own — nobody checks a site they forgot about."""
+    from app import email
+
+    sent: list[tuple] = []
+    monkeypatch.setattr(email, "notify_new_message", lambda *args: sent.append(args))
+
+    register(client, "owner")
+    token = csrf_for(client)
+    client.post("/listings", data={"csrf_token": token, "title": "Jars"}, follow_redirects=False)
+    client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
+
+    register(client, "buyer")
+    client.post(
+        "/listings/1/contact",
+        data={"csrf_token": csrf_for(client), "body": "Are these still going?"},
+        follow_redirects=False,
+    )
+
+    assert len(sent) == 1, "the owner should have been notified exactly once"
+    recipient, sender_name, title = sent[0]
+    assert recipient == "owner@example.com"
+    assert sender_name == "buyer"
+    assert title == "Jars"
+
+
+def test_a_report_reaches_a_human(client, monkeypatch):
+    """The page says "we will take a look", so a report must leave the database."""
+    from app import email
+
+    sent: list[tuple] = []
+    monkeypatch.setattr(email, "notify_new_report", lambda *args: sent.append(args))
+
+    register(client, "owner")
+    token = csrf_for(client)
+    client.post("/listings", data={"csrf_token": token, "title": "Jars"}, follow_redirects=False)
+    client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
+
+    register(client, "reporter")
+    client.post(
+        "/listings/1/report",
+        data={"csrf_token": csrf_for(client), "reason": "not food safe"},
+        follow_redirects=False,
+    )
+
+    assert sent == [(1, "Jars", "not food safe")]
+
+
+def test_a_mail_outage_does_not_lose_the_message(client, monkeypatch):
+    """Notification is a side effect. Failing it must not fail the thing it reports."""
+    from app import email
+
+    def explode(*args, **kwargs):
+        raise RuntimeError("mail provider down")
+
+    # Patch the sender, not notify_new_message, so the real guard is what is tested.
+    monkeypatch.setattr(email, "_send", explode)
+
+    register(client, "owner")
+    token = csrf_for(client)
+    client.post("/listings", data={"csrf_token": token, "title": "Jars"}, follow_redirects=False)
+    client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
+
+    register(client, "buyer")
+    response = client.post(
+        "/listings/1/contact",
+        data={"csrf_token": csrf_for(client), "body": "Are these still going?"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    # The message is in the owner's inbox regardless of what the mailer did.
+    client.post("/logout", data={"csrf_token": csrf_for(client)}, follow_redirects=False)
+    client.post(
+        "/login",
+        data={"email": "owner@example.com", "password": "correct-horse-battery"},
+        follow_redirects=False,
+    )
+    assert "Are these still going?" in client.get("/inbox").text
+
+
+def test_comments_are_gone(client):
+    """The public Q&A channel was removed; only private messages remain."""
     register(client, "alice")
     token = csrf_for(client)
     client.post("/listings", data={"csrf_token": token, "title": "Jars"}, follow_redirects=False)
-    client.post(
+
+    posted = client.post(
         "/listings/1/comments",
         data={"csrf_token": token, "body": "What size are they?"},
         follow_redirects=False,
     )
-    page = client.get("/listings/1").text
-    assert "What size are they?" in page
-    assert "alice" in page
+    assert posted.status_code == 405 or posted.status_code == 404
+    assert "comments" not in client.get("/listings/1").text
 
 
 def test_geojson_exposes_only_public_fields(client):

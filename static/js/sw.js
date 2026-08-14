@@ -1,71 +1,22 @@
-// Service worker: keep the app usable on a bad connection.
+// Tombstone. The PWA layer was removed; this file only exists to retire the service
+// worker that earlier visitors installed.
 //
-// Static assets    -> cache first (they are versioned by CACHE name).
-// Listing pages    -> network first, fall back to the copy we cached on last visit.
-// Everything else  -> network, with an offline page as the last resort.
+// Deleting the route instead would leave that worker registered in their browser
+// indefinitely, still serving assets from its old cache — so it has to be replaced
+// by one that deletes its caches and unregisters itself. Keep this served until the
+// old worker can be assumed gone everywhere, then remove the file and its route.
 
-const CACHE = 'containerswap-v1';
-const SHELL = [
-  '/',
-  '/offline',
-  '/static/css/app.css',
-  '/static/js/app.js',
-  '/static/icons/icon.svg',
-  '/manifest.webmanifest',
-];
-
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())
-  );
-});
+self.addEventListener('install', () => self.skipWaiting());
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
-      .then(() => self.clients.claim())
-  );
-});
-
-self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  if (request.method !== 'GET') return;
-
-  const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-
-  // Never cache the inbox: it is private, per-user content.
-  if (url.pathname.startsWith('/inbox')) return;
-
-  const isAsset =
-    url.pathname.startsWith('/static/') || url.pathname.startsWith('/uploads/');
-
-  if (isAsset) {
-    event.respondWith(
-      caches.match(request).then(
-        (hit) =>
-          hit ||
-          fetch(request).then((response) => {
-            const copy = response.clone();
-            caches.open(CACHE).then((cache) => cache.put(request, copy));
-            return response;
-          })
-      )
-    );
-    return;
-  }
-
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE).then((cache) => cache.put(request, copy));
-        return response;
-      })
-      .catch(() =>
-        caches.match(request).then((hit) => hit || caches.match('/offline'))
-      )
+    (async () => {
+      const names = await caches.keys();
+      await Promise.all(names.map((name) => caches.delete(name)));
+      await self.registration.unregister();
+      const clients = await self.clients.matchAll({ type: 'window' });
+      // Reload so the page stops being served by this worker immediately.
+      clients.forEach((client) => client.navigate(client.url));
+    })()
   );
 });

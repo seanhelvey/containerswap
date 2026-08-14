@@ -70,36 +70,6 @@
   </section>
 {% endif %}
 
-<section class="panel" id="comments">
-  <h2>{{ t('comments.title') }}</h2>
-  {% if comments %}
-    <ul class="comments">
-      {% for comment in comments %}
-        <li>
-          <p class="comment-head">
-            <strong>{{ comment.user.display_name }}</strong>
-            <time datetime="{{ comment.created_at.isoformat() }}"></time>
-          </p>
-          <p>{{ comment.body }}</p>
-        </li>
-      {% endfor %}
-    </ul>
-  {% else %}
-    <p class="hint">{{ t('comments.empty') }}</p>
-  {% endif %}
-
-  {% if current_user %}
-    <form method="post" action="/listings/{{ listing.id }}/comments">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <textarea name="body" rows="2" required maxlength="1000"
-                placeholder="{{ t('comments.placeholder') }}"></textarea>
-      <button class="button button-secondary" type="submit">{{ t('comments.send') }}</button>
-    </form>
-  {% else %}
-    <a class="link-button" href="/login?next=/listings/{{ listing.id }}">{{ t('comments.login_required') }}</a>
-  {% endif %}
-</section>
-
 {% if current_user and not is_owner %}
   <details class="panel report">
     <summary>{{ t('report.button') }}</summary>

@@ -160,27 +160,20 @@ if not settings.uses_object_storage:
     app.mount("/uploads", StaticFiles(directory=str(settings.upload_dir)), name="uploads")
 
 
-@app.get("/manifest.webmanifest", include_in_schema=False)
-def manifest():
-    return FileResponse(
-        BASE_DIR / "static" / "manifest.webmanifest",
-        media_type="application/manifest+json",
-    )
-
-
 @app.get("/sw.js", include_in_schema=False)
 def service_worker():
-    """Served from the root so its scope covers the whole site."""
+    """Only still here to retire the worker earlier visitors installed.
+
+    static/js/sw.js is a tombstone that clears its caches and unregisters itself.
+    Dropping this route instead would strand that old worker in their browsers,
+    serving stale assets with no way to reach it. Delete both once enough time has
+    passed for it to have run everywhere.
+    """
     return FileResponse(
         BASE_DIR / "static" / "js" / "sw.js",
         media_type="application/javascript",
         headers={"Cache-Control": "no-cache"},
     )
-
-
-@app.get("/offline", include_in_schema=False)
-def offline(request: Request):
-    return render(request, "offline.html")
 
 
 @app.get("/robots.txt", include_in_schema=False)

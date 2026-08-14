@@ -57,7 +57,19 @@ class Settings(BaseSettings):
     supabase_service_key: str = ""
     storage_bucket: str = "listing-photos"
 
-    @field_validator("supabase_url")
+    # Transactional email (Resend). Unset means no mail is sent at all, which is what
+    # local development wants — no configuration, and no risk of mailing real people
+    # from a dev box. Without it nobody learns they have a message, so production
+    # needs it: it is the only thing that brings a seller back to their inbox.
+    resend_api_key: str = ""
+    # Must be on a domain verified with Resend, or every send is rejected.
+    email_from: str = ""
+    # Where abuse reports go. Unset means reports are logged and nothing else.
+    report_email: str = ""
+    # Absolute base for links in emails; relative URLs are useless in a mail client.
+    site_url: str = "http://127.0.0.1:8000"
+
+    @field_validator("supabase_url", "site_url")
     @classmethod
     def _normalise_supabase_url(cls, value: str) -> str:
         """Accept a bare host, and never keep a trailing slash.
@@ -94,6 +106,10 @@ class Settings(BaseSettings):
     @property
     def upload_dir(self) -> Path:
         return self.data_dir / "uploads"
+
+    @property
+    def email_enabled(self) -> bool:
+        return bool(self.resend_api_key and self.email_from)
 
     @property
     def uses_object_storage(self) -> bool:

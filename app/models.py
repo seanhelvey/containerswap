@@ -90,7 +90,14 @@ class Message(Base):
 
 
 class Comment(Base):
-    """Public Q&A under a listing."""
+    """Retired. Nothing reads or writes this any more — see the routes and templates.
+
+    The class stays for one deploy on purpose. Dropping the table in the same release
+    that removes the code would break the *old* instances, which keep serving through
+    a zero-downtime rollover and still SELECT from it. Delete this class and its
+    relationship on Listing in the next release, and let that migration drop the
+    table — after this one is live everywhere.
+    """
 
     __tablename__ = "comments"
 

@@ -63,6 +63,11 @@ a bug, not a tradeoff:
    browser's precise value is dropped.
 3. **Uploads are re-encoded from raw pixels** so EXIF GPS cannot survive.
 4. **`/inbox` only returns rows where `recipient_id` is the session user.**
+5. **No feature pretends to work.** A control that silently does nothing is a bug of
+   the same kind as the four above — it is a promise to the user that the code does
+   not keep. Either wire it up or take it out. This is why the report button now
+   emails someone, and why the PWA layer and public comments were removed rather
+   than left half-alive.
 
 ## Conventions
 

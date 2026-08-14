@@ -1,17 +1,26 @@
 import logging
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Request,
+    UploadFile,
+)
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app import events, ratelimit, storage
+from app import email, events, ratelimit, storage
 from app.auth import require_user, verify_csrf
 from app.db import get_db
 from app.geo import fuzz, parse_latlng
 from app.images import ImageRejected, process_upload
-from app.models import Comment, Listing, Message, Report, User
+from app.models import Listing, Message, Report, User
 from app.templating import CATEGORIES, render
 
 logger = logging.getLogger("containerswap")
@@ -153,17 +162,6 @@ async def create_listing(
 @router.get("/listings/{listing_id}")
 def listing_detail(request: Request, listing_id: int, db: Session = Depends(get_db)):
     listing = _get_listing(db, listing_id)
-    comments = (
-        db.execute(
-            select(Comment)
-            .options(selectinload(Comment.user))
-            .where(Comment.listing_id == listing_id)
-            .order_by(Comment.created_at.asc())
-        )
-        .scalars()
-        .all()
-    )
-
     viewer = getattr(request.state, "user", None)
     events.log_event(
         db,
@@ -177,7 +175,6 @@ def listing_detail(request: Request, listing_id: int, db: Session = Depends(get_
         "listing_detail.html",
         {
             "listing": listing,
-            "comments": comments,
             "is_owner": bool(viewer and viewer.id == listing.owner_id),
         },
     )
@@ -190,6 +187,7 @@ def listing_detail(request: Request, listing_id: int, db: Session = Depends(get_
 def send_contact(
     request: Request,
     listing_id: int,
+    background: BackgroundTasks,
     body: str = Form(""),
     user: User = Depends(require_user),
     db: Session = Depends(get_db),
@@ -213,25 +211,20 @@ def send_contact(
     )
     db.commit()
     events.log_event(db, events.CONTACT_SENT, listing_id=listing.id, user_id=user.id)
+
+    # After the commit and off the request: an inbox message that was saved must not
+    # be reported as failed because a mail provider was slow. The owner's address is
+    # read here and passed straight to the mailer — it never reaches the template,
+    # the sender, or the log.
+    if listing.owner.notify_on_message:
+        background.add_task(
+            email.notify_new_message,
+            listing.owner.email,
+            user.display_name,
+            listing.title,
+        )
+
     return RedirectResponse(f"/listings/{listing_id}?sent=1", status_code=303)
-
-
-@router.post(
-    "/listings/{listing_id}/comments",
-    dependencies=[Depends(verify_csrf), Depends(ratelimit.limiter("comment"))],
-)
-def add_comment(
-    listing_id: int,
-    body: str = Form(""),
-    user: User = Depends(require_user),
-    db: Session = Depends(get_db),
-):
-    _get_listing(db, listing_id)
-    text = body.strip()
-    if text:
-        db.add(Comment(listing_id=listing_id, user_id=user.id, body=text[:1000]))
-        db.commit()
-    return RedirectResponse(f"/listings/{listing_id}#comments", status_code=303)
 
 
 @router.post(
@@ -240,13 +233,20 @@ def add_comment(
 )
 def report_listing(
     listing_id: int,
+    background: BackgroundTasks,
     reason: str = Form(""),
     user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
-    _get_listing(db, listing_id)
-    db.add(Report(listing_id=listing_id, reporter_id=user.id, reason=reason.strip()[:500]))
+    listing = _get_listing(db, listing_id)
+    text = reason.strip()[:500]
+    db.add(Report(listing_id=listing_id, reporter_id=user.id, reason=text))
     db.commit()
+
+    # "We will take a look" is what the page promises. Without this the row is the
+    # end of the road and the promise is false.
+    background.add_task(email.notify_new_report, listing_id, listing.title, text)
+
     return RedirectResponse(f"/listings/{listing_id}?reported=1", status_code=303)
 
 
