@@ -56,6 +56,19 @@ def describe_key() -> str:
     return f"JWT role={role!r}"
 
 
+def _auth_headers() -> dict[str, str]:
+    """Both headers, because the two key formats are checked in different places.
+
+    `apikey` is what the API gateway reads to identify the key and resolve the role
+    it grants. Storage itself reads the bearer token. Send only the bearer and a
+    non-JWT secret key never reaches the gateway's lookup — Storage tries to parse
+    it as a JWT and fails with "Invalid Compact JWS", which reads like a bad key
+    rather than a missing header.
+    """
+    key = settings.supabase_service_key
+    return {"apikey": key, "Authorization": f"Bearer {key}"}
+
+
 def save(payload: bytes, filename: str) -> None:
     if not settings.uses_object_storage:
         destination = settings.upload_dir / filename
@@ -67,8 +80,8 @@ def save(payload: bytes, filename: str) -> None:
         response = httpx.post(
             f"{settings.supabase_url}/storage/v1/object/{settings.storage_bucket}/{filename}",
             content=payload,
-            headers={
-                "Authorization": f"Bearer {settings.supabase_service_key}",
+            headers=_auth_headers()
+            | {
                 "Content-Type": "image/jpeg",
                 "Cache-Control": "public, max-age=31536000, immutable",
             },
@@ -114,7 +127,7 @@ def delete(filename: str | None) -> None:
         httpx.request(
             "DELETE",
             f"{settings.supabase_url.rstrip('/')}/storage/v1/object/{settings.storage_bucket}/{filename}",
-            headers={"Authorization": f"Bearer {settings.supabase_service_key}"},
+            headers=_auth_headers(),
             timeout=_TIMEOUT,
         )
     except httpx.HTTPError:
