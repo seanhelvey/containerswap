@@ -46,7 +46,13 @@ def save(payload: bytes, filename: str) -> None:
         # Timeouts, DNS failures and malformed URLs all land here. They must not
         # reach the route as a raw httpx exception: that renders a 500 and the user
         # loses everything they typed.
-        raise StorageError(f"upload could not be sent: {type(exc).__name__}") from exc
+        #
+        # The host is in the message because the alternative is guessing at a
+        # misconfigured CS_SUPABASE_URL from a bare ConnectError. It is safe to log:
+        # the service key travels in a header, never in the URL.
+        raise StorageError(
+            f"upload to {settings.supabase_url} failed: {type(exc).__name__}"
+        ) from exc
 
     if response.is_error:
         # Deliberately no response body in the message: it can echo the request, and
