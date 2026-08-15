@@ -18,6 +18,14 @@ from app.db import Base
 
 config = context.config
 
+# Commands that only read from the database — never generate or apply DDL. These
+# stay exempt from CS_CONFIRM_PROD_MIGRATION below: gating `alembic current` broke
+# the pre-push hook's own read-only schema check, which needs to run on every push
+# with no confirmation involved. Anything not in this list (upgrade, downgrade,
+# stamp, ...) defaults to requiring confirmation — safer to over-gate an unfamiliar
+# command than to silently exempt a write.
+_READ_ONLY_COMMANDS = {"current", "history", "heads", "show", "branches", "check", "revision"}
+
 
 def _url() -> str:
     """Resolve the target URL, deliberately avoiding alembic.ini.
@@ -30,14 +38,21 @@ def _url() -> str:
     CS_MIGRATION_DATABASE_URL is safe to leave sitting in .env: it is only ever
     set to production (local dev wants it empty, see Settings.migration_database_url),
     and pydantic-settings loads .env into every process regardless of Docker. Without
-    this gate, any bare `alembic upgrade head` — run by habit, or by a script that
-    didn't mean to — would silently apply DDL to production. CS_CONFIRM_PROD_MIGRATION
-    must never go in .env; it only means anything typed inline, once, for that command.
+    this gate, `alembic upgrade head` — run by habit, or by a script that didn't mean
+    to — would silently apply DDL to production. CS_CONFIRM_PROD_MIGRATION must never
+    go in .env; it only means anything typed inline, once, for that command.
     """
     override = config.attributes.get("sqlalchemy_url")
     if override:
         return override
-    if settings.migration_database_url and not os.environ.get("CS_CONFIRM_PROD_MIGRATION"):
+    cmd_opts = getattr(config, "cmd_opts", None)
+    command_name = cmd_opts.cmd[0].__name__ if cmd_opts and cmd_opts.cmd else None
+    needs_confirmation = command_name not in _READ_ONLY_COMMANDS
+    if (
+        needs_confirmation
+        and settings.migration_database_url
+        and not os.environ.get("CS_CONFIRM_PROD_MIGRATION")
+    ):
         raise RuntimeError(
             "CS_MIGRATION_DATABASE_URL is set, which targets production. Re-run with "
             "CS_CONFIRM_PROD_MIGRATION=yes to confirm that's what you mean to do."
