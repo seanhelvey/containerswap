@@ -48,7 +48,6 @@ _use_a_separate_test_database()
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app import ratelimit  # noqa: E402
 from app.db import Base, engine  # noqa: E402
 from main import app as fastapi_app  # noqa: E402
 
@@ -75,7 +74,6 @@ def fresh_db(schema):
     tables = ", ".join(f'"{table.name}"' for table in Base.metadata.sorted_tables)
     with engine.begin() as conn:
         conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
-    ratelimit.reset()
     yield
 
 

@@ -117,4 +117,23 @@ class EventLog(Base):
     )
 
 
+class RateLimitHit(Base):
+    """Backs app.ratelimit. Postgres instead of in-memory so limits survive a
+    restart and are actually shared across FastAPI Cloud's multiple instances,
+    rather than each one keeping its own undercounted total."""
+
+    __tablename__ = "rate_limit_hits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    bucket: Mapped[str] = mapped_column(String(20))
+    client_key: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 Index("ix_listings_status_created", Listing.status, Listing.created_at)
+Index(
+    "ix_rate_limit_hits_lookup",
+    RateLimitHit.bucket,
+    RateLimitHit.client_key,
+    RateLimitHit.created_at,
+)

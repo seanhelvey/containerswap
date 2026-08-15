@@ -1,7 +1,8 @@
-# ContainerSwap — working notes
+# Secondhand Plastic — working notes
 
-Peer-to-peer swapping of used food containers. Server-rendered FastAPI + Jinja2, no
-frontend build step. Public repo, so assume anything committed is world-readable.
+Matches secondhand food containers with people who'll use them, instead of the bin.
+Server-rendered FastAPI + Jinja2, no frontend build step. Public repo, so assume
+anything committed is world-readable.
 
 ## Commands
 
@@ -49,10 +50,11 @@ must be marked Secret **at creation**; the toggle is not available afterwards.
   State lives in Supabase: Postgres for data, Storage for uploaded images. `data/`
   is local-dev scratch space only.
 - **Zero-downtime deploys run old and new instances at once.** Nothing may assume a
-  single process. Consequences: the in-memory rate limiter in `app/ratelimit.py`
-  under-counts and still needs a shared backend; the app does no schema work at
-  startup, so migrations run as a separate step before the deploy; and a migration
-  must leave the *old* code working, since it keeps serving during the rollover.
+  single process. Consequences: `app/ratelimit.py` is Postgres-backed rather than
+  in-memory, so limits are shared across instances and survive a restart; the app
+  does no schema work at startup, so migrations run as a separate step before the
+  deploy; and a migration must leave the *old* code working, since it keeps serving
+  during the rollover.
 - **Connect through the transaction pooler (6543), migrate through the direct
   connection (5432).** Direct connections are too few for multiple instances, and
   DDL through the pooler is unreliable. Server-side prepared statements are disabled

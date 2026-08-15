@@ -1,12 +1,13 @@
-# ContainerSwap
+# Secondhand Plastic
 
 **Jars, tubs and containers looking for a second life.**
 
-[fast-api-b7daf63f.fastapicloud.dev →](https://fast-api-b7daf63f.fastapicloud.dev/)
+[secondhandplastic.com →](https://secondhandplastic.com/)
 
-A peer-to-peer marketplace for swapping used food containers — glass jars, deli tubs,
-yogurt pots — that would otherwise go in the bin. Mobile-first, low-bandwidth, and
-built to work as well on a cheap phone in Nairobi as on a laptop in Arcata.
+Matches secondhand food containers — glass jars, deli tubs, yogurt pots — with
+someone who'll use them, instead of leaving that to the bin. Mobile-first,
+low-bandwidth, and built to work as well on a cheap phone in Nairobi as on a laptop
+in Arcata.
 
 Server-rendered FastAPI + Jinja2 + Postgres. No frontend build step, no bundler, no
 node_modules. About 40 KB of hand-written CSS and JS on the wire.
@@ -144,8 +145,8 @@ Migrations are the exception: DDL through the transaction pooler is unreliable, 
 
 Nothing may assume a single process. Most migrations must be additive-only, aside
 from the `post_deploy` exception above; the app does no schema work at startup; and
-the in-memory rate limiter in `app/ratelimit.py` under-counts across instances — it
-still needs a shared backend.
+`app/ratelimit.py` is Postgres-backed rather than in-memory, so limits are shared
+and survive a restart.
 
 ## Layout
 

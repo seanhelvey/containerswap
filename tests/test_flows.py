@@ -20,7 +20,7 @@ def event_types() -> list[str]:
 def test_home_renders_for_anonymous_visitors(client):
     response = client.get("/")
     assert response.status_code == 200
-    assert "ContainerSwap" in response.text
+    assert settings.site_name in response.text
 
 
 def test_full_listing_lifecycle_logs_every_analytics_event(client):
@@ -106,6 +106,28 @@ def test_signup_needs_only_an_email_and_password(client):
         user = db.query(User).filter_by(email="someone@example.com").one()
         assert user.display_name, "a public name should have been generated"
         assert "@" not in user.display_name
+
+
+def test_signup_flood_is_rate_limited(client):
+    """LIMITS['signup'] is (5, 3600) — the 6th attempt in the window should 429.
+
+    Also the one thing that actually exercises the Postgres-backed limiter rather
+    than just trusting the rewrite from in-memory.
+    """
+    for i in range(5):
+        response = client.post(
+            "/signup",
+            data={"email": f"flood{i}@example.com", "password": "correct-horse-battery"},
+            follow_redirects=False,
+        )
+        assert response.status_code == 303, response.text
+
+    response = client.post(
+        "/signup",
+        data={"email": "flood5@example.com", "password": "correct-horse-battery"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 429
 
 
 def test_email_is_case_insensitive_at_login(client):

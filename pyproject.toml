@@ -1,7 +1,7 @@
 [project]
 name = "containerswap"
 version = "0.1.0"
-description = "ContainerSwap — a peer-to-peer marketplace for swapping used food containers that would otherwise be wasted."
+description = "Secondhand Plastic — matches secondhand food containers with people who'll use them, before they hit the bin."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

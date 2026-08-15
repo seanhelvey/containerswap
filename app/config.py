@@ -14,7 +14,7 @@ DEFAULT_DATABASE_URL = "postgresql+psycopg://containerswap:localdev@localhost:54
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_prefix="CS_", extra="ignore")
 
-    site_name: str = "ContainerSwap"
+    site_name: str = "SecondhandPlastic.com"
     # Deliberately a recognisable placeholder, not a real key. main.py logs an
     # error at startup if it survives into production.
     secret_key: str = "dev-only-insecure-change-me"  # noqa: S105

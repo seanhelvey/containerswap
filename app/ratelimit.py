@@ -1,16 +1,20 @@
-"""A small in-process rate limiter.
+"""A Postgres-backed rate limiter.
 
-Good enough for a single-instance v1 and it costs no infrastructure. If the app is
-ever scaled past one worker this needs to move to shared storage — until then, this
-is the honest simplest thing that blunts signup floods and contact-form spam.
+Was in-memory, which cost no infrastructure but under-counted across FastAPI
+Cloud's multiple instances and forgot everything on a restart. Postgres is
+already the one piece of real infrastructure this app has, so it is the
+shared backend, rather than adding a new one (Redis, etc.) for a limiter
+this small.
 """
 
-import time
-from collections import defaultdict, deque
+from datetime import UTC, datetime, timedelta
 
-from fastapi import HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy import delete, func, select
+from sqlalchemy.orm import Session
 
-_hits: dict[str, deque[float]] = defaultdict(deque)
+from app.db import get_db
+from app.models import RateLimitHit
 
 # bucket -> (max events, window seconds)
 LIMITS: dict[str, tuple[int, int]] = {
@@ -30,27 +34,39 @@ def client_key(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-def check(request: Request, bucket: str) -> None:
+def check(db: Session, request: Request, bucket: str) -> None:
     limit, window = LIMITS[bucket]
-    key = f"{bucket}:{client_key(request)}"
-    now = time.monotonic()
-    events = _hits[key]
-    while events and now - events[0] > window:
-        events.popleft()
-    if len(events) >= limit:
+    key = client_key(request)
+    cutoff = datetime.now(UTC) - timedelta(seconds=window)
+
+    # Expired hits for this key are deleted on every check rather than by a separate
+    # cleanup job, so the table never accumulates more than LIMITS worth of rows per
+    # active key — no cron, no unbounded growth.
+    db.execute(
+        delete(RateLimitHit).where(
+            RateLimitHit.bucket == bucket,
+            RateLimitHit.client_key == key,
+            RateLimitHit.created_at < cutoff,
+        )
+    )
+    count = db.scalar(
+        select(func.count()).where(
+            RateLimitHit.bucket == bucket,
+            RateLimitHit.client_key == key,
+        )
+    )
+    if count and count >= limit:
+        db.commit()
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please wait a while and try again.",
         )
-    events.append(now)
+    db.add(RateLimitHit(bucket=bucket, client_key=key))
+    db.commit()
 
 
 def limiter(bucket: str):
-    def _dependency(request: Request) -> None:
-        check(request, bucket)
+    def _dependency(request: Request, db: Session = Depends(get_db)) -> None:
+        check(db, request, bucket)
 
     return _dependency
-
-
-def reset() -> None:
-    _hits.clear()
