@@ -101,9 +101,6 @@ def notify_new_message(recipient_email: str, sender_name: str, listing_title: st
     _send(
         recipient_email,
         f"Someone asked about your {listing_title}",
-        # No "manage your preferences" line: notify_on_message is honoured but has no
-        # UI yet, and pointing at a settings page that does not exist is the kind of
-        # promise this codebase is trying to stop making. Add the line with the page.
         f'{sender_name} sent you a message about "{listing_title}".\n\n'
         f"Read it and reply here: {settings.site_url}/inbox\n\n"
         f"— {settings.site_name}",

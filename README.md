@@ -2,10 +2,11 @@
 
 **Jars, tubs and containers looking for a second life.**
 
+[fast-api-b7daf63f.fastapicloud.dev →](https://fast-api-b7daf63f.fastapicloud.dev/)
+
 A peer-to-peer marketplace for swapping used food containers — glass jars, deli tubs,
-yogurt pots — that would otherwise go in the bin. Mobile-first, low-bandwidth,
-installable, and built to work as well on a cheap phone in Nairobi as on a laptop in
-Arcata.
+yogurt pots — that would otherwise go in the bin. Mobile-first, low-bandwidth, and
+built to work as well on a cheap phone in Nairobi as on a laptop in Arcata.
 
 Server-rendered FastAPI + Jinja2 + Postgres. No frontend build step, no bundler, no
 node_modules. About 40 KB of hand-written CSS and JS on the wire.
@@ -51,6 +52,7 @@ One deployment can be grassroots without the codebase being parochial.
 
 ```bash
 uv sync
+uv run playwright install chromium   # once, for the e2e tests in tests/e2e
 make up                       # Postgres on :5433, then migrate
 uv run fastapi dev
 ```
@@ -84,14 +86,33 @@ CI does not gate it — a red build still ships, so run the tests before you pus
 `.githooks/pre-push` hook enforces that, plus one thing CI cannot check: that
 production's schema is already at the repo's migration head.
 
-**Migrate before you push.** There is no release phase, so the new code starts serving
-the moment the push lands. Applying migrations first is safe because they are additive
-and the old instances keep working through the rollover:
+**Migrate before you push, unless the migration is `post_deploy`.** There is no
+release phase, so the new code starts serving the moment the push lands. Applying an
+ordinary migration first is safe because it's additive and the old instances keep
+working through the rollover:
 
 ```bash
-CS_MIGRATION_DATABASE_URL='postgresql+psycopg://...:5432/postgres' uv run alembic upgrade head
+CS_CONFIRM_PROD_MIGRATION=yes uv run alembic upgrade head
 git push origin main
 ```
+
+A migration that removes something the *currently deployed* code still reads is the
+opposite case — applying it first would break the old instances still serving through
+the rollover. Mark it `post_deploy = True` in the revision file instead (see
+`migrations/deploy_safety.py`), and the hook lets the push land ahead of it, on the
+condition that every migration production is missing is marked that way:
+
+```bash
+git push origin main
+# once the deploy has finished rolling over:
+CS_CONFIRM_PROD_MIGRATION=yes uv run alembic upgrade head
+```
+
+`CS_MIGRATION_DATABASE_URL` lives in `.env` (production's direct connection, port 5432)
+since it's only ever set to production — but `migrations/env.py` refuses to use it
+unless `CS_CONFIRM_PROD_MIGRATION` is also passed inline, so a bare `alembic upgrade
+head` run out of habit can't silently reach production. `make up` never hits this: it
+forces both variables to the local container regardless of `.env`.
 
 Environment variables, set in the FastAPI Cloud dashboard. Anything secret must be
 marked Secret **at creation** — the toggle disappears afterwards:
@@ -121,27 +142,30 @@ transaction pooler on 6543. Server-side prepared statements are disabled to suit
 Migrations are the exception: DDL through the transaction pooler is unreliable, so
 `CS_MIGRATION_DATABASE_URL` should point at the direct or session connection on 5432.
 
-Nothing may assume a single process. Additive-only migrations are the only safe kind,
-the app does no schema work at startup, and the in-memory rate limiter in
-`app/ratelimit.py` under-counts across instances — it still needs a shared backend.
+Nothing may assume a single process. Most migrations must be additive-only, aside
+from the `post_deploy` exception above; the app does no schema work at startup; and
+the in-memory rate limiter in `app/ratelimit.py` under-counts across instances — it
+still needs a shared backend.
 
 ## Layout
 
 ```
-main.py              app wiring, security headers, PWA routes
+main.py              app wiring, security headers
 app/config.py        settings (all CS_-prefixed env vars)
-app/models.py        users, listings, messages, comments, reports, event_log
+app/models.py        users, listings, messages, reports, event_log
 app/auth.py          argon2 + signed-cookie sessions + CSRF
 app/geo.py           coordinate fuzzing
 app/images.py        upload validation, EXIF stripping, compression
 app/storage.py       where processed images go: local disk or object store
 app/i18n.py          translation lookup
 app/routes/          account.py, listings.py
-migrations/          Alembic; versions/ holds the schema history
+migrations/          Alembic; versions/ holds the schema history; deploy_safety.py
+                      backs the pre-push hook's post_deploy check
 templates/           Jinja2, mobile-first
 static/              css, js, vendored Leaflet, icons
 locales/en.json      every user-facing string
 docker-compose.yml   local Postgres for development and tests
+tests/e2e/            Playwright, against a real uvicorn instance
 ```
 
 ## Analytics

@@ -24,13 +24,9 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     # PRIVATE. Never put this in a template, an API response, or a log line.
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
-    # PUBLIC. Shown on listings and comments.
+    # PUBLIC. Shown on listings.
     display_name: Mapped[str] = mapped_column(String(32), index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
-    # server_default so an Alembic add-column backfills existing rows instead of
-    # leaving NULL. `true`, not `1`: Postgres has a real boolean type and rejects the
-    # integer literal that SQLite used to accept.
-    notify_on_message: Mapped[bool] = mapped_column(default=True, server_default=text("true"))
     is_active: Mapped[bool] = mapped_column(default=True, server_default=text("true"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
@@ -60,9 +56,6 @@ class Listing(Base):
     )
 
     owner: Mapped[User] = relationship(back_populates="listings")
-    comments: Mapped[list["Comment"]] = relationship(
-        back_populates="listing", cascade="all, delete-orphan"
-    )
 
     @property
     def is_active(self) -> bool:
@@ -87,30 +80,6 @@ class Message(Base):
 
     listing: Mapped[Listing] = relationship()
     sender: Mapped[User] = relationship(foreign_keys=[sender_id])
-
-
-class Comment(Base):
-    """Retired. Nothing reads or writes this any more — see the routes and templates.
-
-    The class stays for one deploy on purpose. Dropping the table in the same release
-    that removes the code would break the *old* instances, which keep serving through
-    a zero-downtime rollover and still SELECT from it. Delete this class and its
-    relationship on Listing in the next release, and let that migration drop the
-    table — after this one is live everywhere.
-    """
-
-    __tablename__ = "comments"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    listing_id: Mapped[int] = mapped_column(
-        ForeignKey("listings.id", ondelete="CASCADE"), index=True
-    )
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
-    body: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-
-    listing: Mapped[Listing] = relationship(back_populates="comments")
-    user: Mapped[User] = relationship()
 
 
 class Report(Base):

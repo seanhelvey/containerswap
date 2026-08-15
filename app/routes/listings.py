@@ -216,13 +216,12 @@ def send_contact(
     # be reported as failed because a mail provider was slow. The owner's address is
     # read here and passed straight to the mailer — it never reaches the template,
     # the sender, or the log.
-    if listing.owner.notify_on_message:
-        background.add_task(
-            email.notify_new_message,
-            listing.owner.email,
-            user.display_name,
-            listing.title,
-        )
+    background.add_task(
+        email.notify_new_message,
+        listing.owner.email,
+        user.display_name,
+        listing.title,
+    )
 
     return RedirectResponse(f"/listings/{listing_id}?sent=1", status_code=303)
 

@@ -3,9 +3,11 @@
 from io import BytesIO
 
 from PIL import Image
+from sqlalchemy.exc import SQLAlchemyError
 
+import main
 from app.config import settings
-from app.db import SessionLocal
+from app.db import SessionLocal, get_db
 from app.models import EventLog, User
 from tests.conftest import csrf_for, register
 
@@ -286,6 +288,22 @@ def test_security_headers_are_present(client):
 
 def test_healthz(client):
     assert client.get("/healthz").json() == {"status": "ok"}
+
+
+def test_healthz_reports_a_database_outage(client):
+    """The whole point of a DB check is to stop being green during an outage."""
+
+    class ExplodingSession:
+        def execute(self, *args, **kwargs):
+            raise SQLAlchemyError("db is down")
+
+    main.app.dependency_overrides[get_db] = lambda: ExplodingSession()
+    try:
+        response = client.get("/healthz")
+    finally:
+        del main.app.dependency_overrides[get_db]
+    assert response.status_code == 503
+    assert response.json() == {"status": "error"}
 
 
 def test_storage_failure_returns_the_form_not_a_500(client, monkeypatch):

@@ -4,8 +4,14 @@
 #
 # Compose is given --env-file /dev/null because it reads .env for variable
 # substitution by default, and .env holds the production connection string.
+# The alembic call below overrides CS_DATABASE_URL / CS_MIGRATION_DATABASE_URL
+# for the same reason, pointing both at the local container. migrations/env.py
+# refuses to use CS_MIGRATION_DATABASE_URL without CS_CONFIRM_PROD_MIGRATION, so
+# without this override `make up` would just fail rather than reach production —
+# the override exists so routine local dev doesn't have to pass that flag.
 
 COMPOSE := docker compose --env-file /dev/null
+LOCAL_DB := postgresql+psycopg://containerswap:localdev@localhost:5433/containerswap
 
 .DEFAULT_GOAL := help
 .PHONY: help up down reset psql logs
@@ -25,7 +31,7 @@ up:  ## Start Postgres, wait for it, and apply migrations
 		printf '.'; sleep 1; \
 	done
 	@echo ' ready'
-	@uv run alembic upgrade head
+	@CS_DATABASE_URL=$(LOCAL_DB) CS_MIGRATION_DATABASE_URL= uv run alembic upgrade head
 
 down:  ## Stop Postgres, keeping data
 	@$(COMPOSE) down

@@ -6,6 +6,7 @@ when set — in production that must be Supabase's *direct* connection (port 543
 because DDL through the transaction pooler is unreliable.
 """
 
+import os
 from logging.config import fileConfig
 
 from alembic import context
@@ -25,8 +26,23 @@ def _url() -> str:
     configparser, which treats `%` as interpolation syntax and raises on any
     password containing one. config.attributes is a plain dict, so tests can inject
     a scratch URL here without that hazard.
+
+    CS_MIGRATION_DATABASE_URL is safe to leave sitting in .env: it is only ever
+    set to production (local dev wants it empty, see Settings.migration_database_url),
+    and pydantic-settings loads .env into every process regardless of Docker. Without
+    this gate, any bare `alembic upgrade head` — run by habit, or by a script that
+    didn't mean to — would silently apply DDL to production. CS_CONFIRM_PROD_MIGRATION
+    must never go in .env; it only means anything typed inline, once, for that command.
     """
-    return config.attributes.get("sqlalchemy_url") or settings.alembic_url
+    override = config.attributes.get("sqlalchemy_url")
+    if override:
+        return override
+    if settings.migration_database_url and not os.environ.get("CS_CONFIRM_PROD_MIGRATION"):
+        raise RuntimeError(
+            "CS_MIGRATION_DATABASE_URL is set, which targets production. Re-run with "
+            "CS_CONFIRM_PROD_MIGRATION=yes to confirm that's what you mean to do."
+        )
+    return settings.alembic_url
 
 
 if config.config_file_name is not None:

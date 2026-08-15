@@ -10,10 +10,12 @@ echo "pre-push: main deploys on push — running checks"
 uv run ruff check . || { echo "pre-push: lint failed"; exit 1; }
 uv run pytest -q || { echo "pre-push: tests failed"; exit 1; }
 
-# Production must already be migrated. The deploy starts the moment this push lands
-# and there is no release phase, so new code would otherwise boot against the old
-# schema. Migrating first is safe because migrations are additive: the old instances
-# keep serving through the rollover.
+# Production must already be migrated — UNLESS every migration it's missing is
+# marked post_deploy (see migrations/deploy_safety.py). Ordinary migrations are
+# additive, so applying them first is safe: old instances keep serving through the
+# rollover unaffected. A post_deploy migration is the opposite case — it removes
+# something the *currently deployed* code still reads, so it must apply after the
+# new code is live, not before.
 # Ask the app, not the shell: the URL may come from .env, and when it is absent
 # alembic silently falls back to the local database — which is always at head and
 # would report a false green.
@@ -32,12 +34,20 @@ if [ "$is_remote" = "1" ]; then
   local_head="$(uv run alembic heads 2>/dev/null | awk 'NR==1{print $1}')"
   prod_rev="$(uv run alembic current 2>/dev/null | awk '/^[0-9a-f]{12}/{print $1}')"
   if [ "$local_head" != "$prod_rev" ]; then
-    echo "pre-push: production is at '${prod_rev:-<none>}', repo head is '${local_head}'"
-    echo "pre-push: migrate first —"
-    echo "  CS_MIGRATION_DATABASE_URL='...' uv run alembic upgrade head"
-    exit 1
+    if uv run python migrations/deploy_safety.py "$prod_rev" 2>/dev/null; then
+      echo "pre-push: production is at '${prod_rev:-<none>}', repo head is '${local_head}'"
+      echo "pre-push: every migration in between is marked post_deploy — ok to push ahead."
+      echo "pre-push: migrate right after this deploy finishes rolling over —"
+      echo "  CS_CONFIRM_PROD_MIGRATION=yes uv run alembic upgrade head"
+    else
+      echo "pre-push: production is at '${prod_rev:-<none>}', repo head is '${local_head}'"
+      echo "pre-push: migrate first —"
+      echo "  CS_CONFIRM_PROD_MIGRATION=yes uv run alembic upgrade head"
+      exit 1
+    fi
+  else
+    echo "pre-push: production (${target_host}) is at ${prod_rev}"
   fi
-  echo "pre-push: production (${target_host}) is at ${prod_rev}"
 else
   # Not fatal: refusing every push because a secret is absent would just train you
   # to use --no-verify, which disables the test gate above too.

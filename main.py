@@ -1,14 +1,17 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 
 from app import storage
 from app.auth import get_current_user
 from app.config import BASE_DIR, settings
-from app.db import SessionLocal
+from app.db import SessionLocal, get_db
 from app.routes import account, listings
 from app.templating import render, set_request_language
 
@@ -160,27 +163,18 @@ if not settings.uses_object_storage:
     app.mount("/uploads", StaticFiles(directory=str(settings.upload_dir)), name="uploads")
 
 
-@app.get("/sw.js", include_in_schema=False)
-def service_worker():
-    """Only still here to retire the worker earlier visitors installed.
-
-    static/js/sw.js is a tombstone that clears its caches and unregisters itself.
-    Dropping this route instead would strand that old worker in their browsers,
-    serving stale assets with no way to reach it. Delete both once enough time has
-    passed for it to have run everywhere.
-    """
-    return FileResponse(
-        BASE_DIR / "static" / "js" / "sw.js",
-        media_type="application/javascript",
-        headers={"Cache-Control": "no-cache"},
-    )
-
-
 @app.get("/robots.txt", include_in_schema=False)
 def robots():
     return Response("User-agent: *\nAllow: /\nDisallow: /inbox\n", media_type="text/plain")
 
 
 @app.get("/healthz", include_in_schema=False)
-def healthz():
+def healthz(db: Session = Depends(get_db)):
+    """Executes SELECT 1 rather than returning a bare 200, so this is an actual deploy
+    gate and smoke-test target instead of staying green through a database outage."""
+    try:
+        db.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        logger.exception("healthz: database check failed")
+        return JSONResponse({"status": "error"}, status_code=503)
     return {"status": "ok"}
