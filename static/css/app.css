@@ -188,6 +188,7 @@ main { padding: var(--pad); max-width: 900px; margin: 0 auto; }
 }
 .badge-done { background: var(--ink); color: var(--bg); }
 .badge-seed { background: var(--surface); color: var(--ink-soft); border: 1px solid var(--line); }
+.badge-removed { background: var(--surface); color: var(--ink-soft); border: 1px solid var(--line); }
 .pill-seed { background: var(--surface); color: var(--ink-soft); border: 1px dashed var(--line); }
 
 /* --- forms --- */

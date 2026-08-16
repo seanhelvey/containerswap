@@ -96,6 +96,89 @@ def test_a_stranger_cannot_toggle_someone_elses_listing_as_demo(client):
     assert response.status_code == 403
 
 
+def test_owner_can_edit_a_listing(client):
+    register(client, "owner")
+    token = csrf_for(client)
+    client.post(
+        "/listings",
+        data={
+            "csrf_token": token,
+            "title": "Jars",
+            "price": "free",
+            "lat": "40.8021",
+            "lng": "-124.1637",
+        },
+        follow_redirects=False,
+    )
+    with SessionLocal() as db:
+        original = db.query(Listing).filter_by(id=1).one()
+        original_lat, original_lng = original.lat, original.lng
+
+    response = client.post(
+        "/listings/1/edit",
+        data={"csrf_token": token, "title": "Glass jars, updated", "price": "$2"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/listings/1"
+
+    with SessionLocal() as db:
+        updated = db.query(Listing).filter_by(id=1).one()
+        assert updated.title == "Glass jars, updated"
+        assert updated.price == "$2"
+        # Untouched coordinates must not be re-fuzzed on every edit, or the pin
+        # would drift further from the real location each time.
+        assert (updated.lat, updated.lng) == (original_lat, original_lng)
+
+
+def test_a_stranger_cannot_edit_someone_elses_listing(client):
+    register(client, "owner")
+    token = csrf_for(client)
+    client.post("/listings", data={"csrf_token": token, "title": "Jars"}, follow_redirects=False)
+    client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
+
+    register(client, "stranger")
+    response = client.post(
+        "/listings/1/edit",
+        data={"csrf_token": csrf_for(client), "title": "Hijacked"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 403
+
+
+def test_owner_can_delete_a_listing(client):
+    register(client, "owner")
+    token = csrf_for(client)
+    client.post("/listings", data={"csrf_token": token, "title": "Jars"}, follow_redirects=False)
+
+    response = client.post("/listings/1/delete", data={"csrf_token": token}, follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers["location"] == "/inbox"
+
+    with SessionLocal() as db:
+        assert db.query(Listing).filter_by(id=1).one().status == "removed"
+
+    # Gone to everyone else, same as a real delete would be.
+    client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
+    register(client, "stranger")
+    assert client.get("/listings/1").status_code == 404
+
+
+def test_a_stranger_cannot_delete_someone_elses_listing(client):
+    register(client, "owner")
+    token = csrf_for(client)
+    client.post("/listings", data={"csrf_token": token, "title": "Jars"}, follow_redirects=False)
+    client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
+
+    register(client, "stranger")
+    response = client.post(
+        "/listings/1/delete", data={"csrf_token": csrf_for(client)}, follow_redirects=False
+    )
+    assert response.status_code == 403
+    with SessionLocal() as db:
+        assert db.query(Listing).filter_by(id=1).one().status == "active"
+
+
 def test_posting_without_a_csrf_token_is_rejected(client):
     register(client, "alice")
     response = client.post("/listings", data={"title": "No token"}, follow_redirects=False)
@@ -601,7 +684,22 @@ def test_geojson_exposes_only_public_fields(client):
         "category",
         "url",
         "image",
+        "is_seed",
     }
+
+
+def test_geojson_flags_demo_listings_so_the_map_can_tell_them_apart(client):
+    register(client, "owner")
+    token = csrf_for(client)
+    client.post(
+        "/listings",
+        data={"csrf_token": token, "title": "Jars", "lat": "40.8", "lng": "-124.1"},
+        follow_redirects=False,
+    )
+    client.post("/listings/1/toggle-demo", data={"csrf_token": token}, follow_redirects=False)
+
+    feature = client.get("/api/listings.geojson").json()["features"][0]
+    assert feature["properties"]["is_seed"] is True
 
 
 def test_photo_upload_is_shrunk_and_served(client):

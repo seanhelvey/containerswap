@@ -22,9 +22,24 @@
       data.features.forEach((feature) => {
         const [lng, lat] = feature.geometry.coordinates;
         const p = feature.properties;
-        const marker = L.marker([lat, lng]).addTo(map);
+        // Demo listings get a visibly different pin — a hollow dashed circle
+        // instead of the solid marker — so the map never shows planted activity
+        // as indistinguishable from real activity. See listing_detail's own
+        // "Demo" pill for the same distinction on a single listing.
+        const marker = p.is_seed
+          ? L.circleMarker([lat, lng], {
+              radius: 8,
+              color: '#8a9490',
+              weight: 2,
+              dashArray: '3,3',
+              fillColor: '#8a9490',
+              fillOpacity: 0.35,
+            })
+          : L.marker([lat, lng]);
+        marker.addTo(map);
         marker.bindPopup(
           `<a href="${p.url}"><strong>${escapeHtml(p.title)}</strong></a>` +
+            (p.is_seed ? ` <em>(${escapeHtml(el.dataset.demoLabel)})</em>` : '') +
             (p.price ? `<br>${escapeHtml(p.price)}` : '') +
             (p.quantity ? `<br>${escapeHtml(p.quantity)}` : '')
         );

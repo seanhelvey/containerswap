@@ -87,6 +87,7 @@ def listings_geojson(db: Session = Depends(get_db)):
                         "category": row.category,
                         "url": f"/listings/{row.id}",
                         "image": storage.url_for(row.image_path),
+                        "is_seed": row.is_seed,
                     },
                 }
                 for row in rows
@@ -166,6 +167,11 @@ async def create_listing(
 def listing_detail(request: Request, listing_id: int, db: Session = Depends(get_db)):
     listing = _get_listing(db, listing_id)
     viewer = getattr(request.state, "user", None)
+    is_owner = bool(viewer and viewer.id == listing.owner_id)
+    if listing.status == "removed" and not is_owner:
+        # A soft delete should behave like a real one for anyone but the owner.
+        raise HTTPException(status_code=404, detail="Listing not found.")
+
     events.log_event(
         db,
         events.LISTING_VIEWED,
@@ -176,10 +182,7 @@ def listing_detail(request: Request, listing_id: int, db: Session = Depends(get_
     return render(
         request,
         "listing_detail.html",
-        {
-            "listing": listing,
-            "is_owner": bool(viewer and viewer.id == listing.owner_id),
-        },
+        {"listing": listing, "is_owner": is_owner},
     )
 
 
@@ -264,7 +267,7 @@ def mark_completed(
     listing = _get_listing(db, listing_id)
     if listing.owner_id != user.id:
         raise HTTPException(status_code=403, detail="Not your listing.")
-    if listing.status != "completed":
+    if listing.status == "active":
         listing.status = "completed"
         db.commit()
         events.log_event(db, events.LISTING_COMPLETED, listing_id=listing.id, user_id=user.id)
@@ -287,6 +290,118 @@ def toggle_demo(
     listing.is_seed = not listing.is_seed
     db.commit()
     return RedirectResponse(f"/listings/{listing_id}", status_code=303)
+
+
+@router.get("/listings/{listing_id}/edit")
+def edit_listing_form(
+    request: Request,
+    listing_id: int,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    listing = _get_listing(db, listing_id)
+    if listing.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your listing.")
+    return render(
+        request,
+        "new_listing.html",
+        {
+            "listing": listing,
+            "editing": True,
+            "title": listing.title,
+            "body": listing.body,
+            "quantity": listing.quantity,
+            "price": listing.price,
+            "category": listing.category,
+            "lat": listing.lat,
+            "lng": listing.lng,
+        },
+    )
+
+
+@router.post(
+    "/listings/{listing_id}/edit",
+    dependencies=[Depends(verify_csrf), Depends(ratelimit.limiter("listing"))],
+)
+async def edit_listing(
+    request: Request,
+    listing_id: int,
+    title: str = Form(""),
+    body: str = Form(""),
+    quantity: str = Form(""),
+    price: str = Form(""),
+    category: str = Form("other"),
+    lat: str = Form(""),
+    lng: str = Form(""),
+    image: UploadFile | None = File(None),
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    listing = _get_listing(db, listing_id)
+    if listing.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your listing.")
+
+    title = title.strip()
+    if not title:
+        return _new_listing_error(
+            request, "listing.error.title_required", locals(), listing=listing
+        )
+
+    image_path = listing.image_path
+    if image is not None and image.filename:
+        raw = await image.read()
+        try:
+            image_path = await run_in_threadpool(process_upload, raw)
+        except ImageRejected as exc:
+            return _new_listing_error(
+                request, f"listing.error.image.{exc.args[0]}", locals(), listing=listing
+            )
+        except storage.StorageError:
+            logger.exception("listing image upload failed")
+            return _new_listing_error(
+                request, "listing.error.image.storage_failed", locals(), listing=listing
+            )
+
+    coords = parse_latlng(lat, lng)
+    if coords is None or coords == (listing.lat, listing.lng):
+        # No new coordinates submitted, or unchanged from the already-fuzzed stored
+        # value: either way, keep what's stored rather than clearing the pin or
+        # fuzzing it again on top of an already-fuzzed value. Unlike creating a
+        # listing, there's no form control for deliberately clearing a location on
+        # edit, so an empty submission here means "didn't touch it," not "remove it."
+        stored_lat, stored_lng = listing.lat, listing.lng
+    else:
+        stored_lat, stored_lng = fuzz(*coords)
+
+    listing.title = title[:120]
+    listing.body = body.strip()[:4000]
+    listing.quantity = quantity.strip()[:60]
+    listing.price = price.strip()[:60]
+    listing.category = category if category in CATEGORIES else "other"
+    listing.image_path = image_path
+    listing.lat = stored_lat
+    listing.lng = stored_lng
+    db.commit()
+
+    return RedirectResponse(f"/listings/{listing.id}", status_code=303)
+
+
+@router.post("/listings/{listing_id}/delete", dependencies=[Depends(verify_csrf)])
+def delete_listing(
+    listing_id: int,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    """Soft delete: status="removed" rather than an actual row delete. A hard
+    delete would cascade-drop any Report rows against this listing (ondelete=
+    CASCADE), silently destroying moderation history — removed still means gone
+    to everyone but the owner, see the 404 branch in listing_detail."""
+    listing = _get_listing(db, listing_id)
+    if listing.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your listing.")
+    listing.status = "removed"
+    db.commit()
+    return RedirectResponse("/inbox", status_code=303)
 
 
 @router.get("/inbox")
@@ -360,6 +475,12 @@ def _get_listing(db: Session, listing_id: int) -> Listing:
     return listing
 
 
-def _new_listing_error(request: Request, error_key: str, form: dict):
+def _new_listing_error(
+    request: Request, error_key: str, form: dict, listing: Listing | None = None
+):
     keep = {k: form.get(k, "") for k in ("title", "body", "quantity", "price", "category")}
-    return render(request, "new_listing.html", {"error_key": error_key, **keep}, status_code=400)
+    context = {"error_key": error_key, **keep}
+    if listing is not None:
+        context["listing"] = listing
+        context["editing"] = True
+    return render(request, "new_listing.html", context, status_code=400)

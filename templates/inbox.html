@@ -34,6 +34,8 @@
           <a href="/listings/{{ listing.id }}">{{ listing.title }}</a>
           {% if listing.status == 'completed' %}
             <span class="badge badge-done">{{ t('listing.completed_badge') }}</span>
+          {% elif listing.status == 'removed' %}
+            <span class="badge badge-removed">{{ t('listing.removed_badge') }}</span>
           {% endif %}
         </li>
       {% endfor %}

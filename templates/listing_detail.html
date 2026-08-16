@@ -50,24 +50,35 @@
     <a class="button button-primary button-block" href="/listings/new">{{ t('listing.seed_cta') }}</a>
   </section>
 {% elif is_owner %}
-  {% if listing.status != 'completed' %}
-    <form method="post" action="/listings/{{ listing.id }}/complete">
+  {% if listing.status == 'removed' %}
+    <p class="hint">{{ t('listing.removed_note') }}</p>
+  {% else %}
+    {% if listing.status == 'active' %}
+      <form method="post" action="/listings/{{ listing.id }}/complete">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="button button-primary button-block" type="submit">{{ t('listing.mark_completed') }}</button>
+      </form>
+    {% endif %}
+    <a class="button button-secondary button-block" href="/listings/{{ listing.id }}/edit">{{ t('listing.edit') }}</a>
+    <form method="post" action="/listings/{{ listing.id }}/toggle-demo">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="button button-primary button-block" type="submit">{{ t('listing.mark_completed') }}</button>
+      <button class="button button-secondary button-block" type="submit">
+        {{ t('listing.unmark_demo') if listing.is_seed else t('listing.mark_demo') }}
+      </button>
+    </form>
+    <form method="post" action="/listings/{{ listing.id }}/delete"
+          data-confirm="{{ t('listing.delete_confirm') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="button button-secondary button-block" type="submit">{{ t('listing.delete') }}</button>
     </form>
   {% endif %}
-  <form method="post" action="/listings/{{ listing.id }}/toggle-demo">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button class="button button-secondary button-block" type="submit">
-      {{ t('listing.unmark_demo') if listing.is_seed else t('listing.mark_demo') }}
-    </button>
-  </form>
   <a class="button button-secondary button-block" href="/inbox">{{ t('nav.inbox') }}</a>
 {% elif listing.status == 'active' %}
   <section class="panel" id="contact">
     <h2>{{ t('contact.title') }}</h2>
     <!-- The contact form IS the privacy boundary: no address is ever rendered. -->
     <p class="hint">{{ t('contact.intro') }}</p>
+    <p class="hint">{{ t('contact.no_shipping') }}</p>
     {% if current_user and current_user.email_verified %}
       <form method="post" action="/listings/{{ listing.id }}/contact">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

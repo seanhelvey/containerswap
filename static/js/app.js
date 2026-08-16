@@ -24,3 +24,12 @@
     el.title = stamp.toLocaleString();
   });
 })();
+
+// Confirm before a destructive submit. Reads the prompt from a data attribute
+// rather than a translated string interpolated into inline JS, so a future
+// locale's apostrophe or quote can't break the script.
+document.querySelectorAll('form[data-confirm]').forEach((form) => {
+  form.addEventListener('submit', (event) => {
+    if (!window.confirm(form.dataset.confirm)) event.preventDefault();
+  });
+});

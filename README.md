@@ -1,13 +1,16 @@
 # Secondhand Plastic
 
-**Jars, tubs and containers looking for a second life.**
+**Plastic tubs, jars and containers looking for a second life.**
 
 [secondhandplastic.com →](https://secondhandplastic.com/)
 
-Matches secondhand food containers — glass jars, deli tubs, yogurt pots — with
-someone who'll use them, instead of leaving that to the bin. Mobile-first,
-low-bandwidth, and built to work as well on a cheap phone in Nairobi as on a laptop
-in Arcata.
+Matches secondhand food containers — deli tubs, yogurt pots, glass jars — with
+someone who'll use them, instead of leaving that to the bin. The gap this fills is
+specifically plastic: jars already have easy homes elsewhere (thrift stores,
+Freecycle), but deli tubs and yogurt cups are polypropylene (#5), and only 3-8% of
+it actually gets recycled in practice — most municipal programs don't take it,
+whatever the symbol on the bottom says. Mobile-first, low-bandwidth, and built to
+work as well on a cheap phone in Nairobi as on a laptop in Arcata.
 
 Server-rendered FastAPI + Jinja2 + Postgres. No frontend build step, no bundler, no
 node_modules. About 40 KB of hand-written CSS and JS on the wire.

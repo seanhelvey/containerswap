@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% set active_tab = 'new' %}
-{% block title %}{{ t('listing.new.title') }} · {{ settings.site_name }}{% endblock %}
+{% block title %}{{ t('listing.edit.title') if editing else t('listing.new.title') }} · {{ settings.site_name }}{% endblock %}
 
 {% block content %}
-<h1 class="page-title">{{ t('listing.new.title') }}</h1>
+<h1 class="page-title">{{ t('listing.edit.title') if editing else t('listing.new.title') }}</h1>
 
 {% if not current_user.email_verified %}
 <p>{{ t('listing.new.verify_required') }}</p>
@@ -11,13 +11,16 @@
 
 {% if error_key %}<p class="alert alert-error">{{ t(error_key) }}</p>{% endif %}
 
-<form class="form" method="post" action="/listings" enctype="multipart/form-data">
+<form class="form" method="post"
+      action="{{ '/listings/' ~ listing.id ~ '/edit' if editing else '/listings' }}"
+      enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
   <!-- Photo first: it is the fastest way to describe a box of jars. -->
   <label class="photo-picker" for="image">
-    <img id="photo-preview" alt="" hidden>
-    <span class="photo-picker-prompt">
+    <img id="photo-preview" alt=""
+         {% if editing and listing.image_path %}src="{{ image_url(listing.image_path) }}"{% else %}hidden{% endif %}>
+    <span class="photo-picker-prompt" {% if editing and listing.image_path %}hidden{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true" width="40" height="40"><path d="M9 3h6l1.5 2H21a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4.5zm3 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10m0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6"/></svg>
       <strong>{{ t('listing.new.photo') }}</strong>
       <small>{{ t('listing.new.photo_hint') }}</small>
@@ -87,7 +90,9 @@
 
   {% include "partials/safety.html" %}
 
-  <button class="button button-primary button-block" type="submit">{{ t('listing.submit') }}</button>
+  <button class="button button-primary button-block" type="submit">
+    {{ t('listing.save_changes') if editing else t('listing.submit') }}
+  </button>
 </form>
 {% endif %}
 {% endblock %}
