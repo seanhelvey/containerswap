@@ -135,6 +135,24 @@ def verify_email(request: Request, token: str, db: Session = Depends(get_db)):
     return render(request, "verify_email.html", {"success": True})
 
 
+@router.post(
+    "/resend-verification",
+    dependencies=[Depends(verify_csrf), Depends(ratelimit.limiter("resend_verification"))],
+)
+def resend_verification(
+    background_tasks: BackgroundTasks,
+    next: str = Form("/"),
+    user: User = Depends(require_user),
+):
+    if not user.email_verified:
+        background_tasks.add_task(
+            notify_verify_email, user.email, issue_email_verification_token(user.id)
+        )
+    target = _safe_next(next)
+    sep = "&" if "?" in target else "?"
+    return RedirectResponse(f"{target}{sep}resent=1", status_code=303)
+
+
 @router.get("/forgot-password")
 def forgot_password_form(request: Request):
     return render(request, "forgot_password.html")

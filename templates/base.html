@@ -29,6 +29,18 @@
   {% endif %}
 </header>
 
+{% if current_user and not current_user.email_verified %}
+  <div class="alert alert-ok banner-verify">
+    <span>{{ t('auth.verify_banner') }}</span>
+    <form method="post" action="/resend-verification" class="inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="next" value="{{ request.url.path }}">
+      <button class="link-button" type="submit">{{ t('auth.resend_verification') }}</button>
+    </form>
+    {% if request.query_params.get('resent') %}<br><small>{{ t('auth.verify_resent') }}</small>{% endif %}
+  </div>
+{% endif %}
+
 <main id="main">
   {% block content %}{% endblock %}
 </main>

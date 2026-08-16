@@ -48,7 +48,8 @@ _use_a_separate_test_database()
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.db import Base, engine  # noqa: E402
+from app.db import Base, SessionLocal, engine  # noqa: E402
+from app.models import User  # noqa: E402
 from main import app as fastapi_app  # noqa: E402
 
 
@@ -89,18 +90,32 @@ def upload_dir() -> Path:
 
 
 def register(client: TestClient, name: str, password: str = "correct-horse-battery") -> None:
-    """Register `name` with a matching address, so tests can talk about people by name."""
+    """Register `name` with a matching address, so tests can talk about people by name.
+
+    Marked verified immediately: posting and messaging require it, and most tests
+    using this helper are not testing verification itself. Tests that are should
+    check/flip email_verified explicitly rather than relying on this default.
+    """
     response = client.post(
         "/signup",
         data={"email": f"{name}@example.com", "password": password, "display_name": name},
         follow_redirects=False,
     )
     assert response.status_code == 303, response.text
+    with SessionLocal() as db:
+        user = db.query(User).filter_by(email=f"{name}@example.com").one()
+        user.email_verified = True
+        db.commit()
 
 
-def csrf_for(client: TestClient) -> str:
-    """Pull the CSRF token the server rendered into a form."""
-    page = client.get("/listings/new")
+def csrf_for(client: TestClient, path: str = "/listings/new") -> str:
+    """Pull the CSRF token the server rendered into a form on `path`.
+
+    Defaults to /listings/new, but that page only renders a form (and so a
+    csrf_token) for a verified account — pass "/" for an unverified one, since
+    the logout form in base.html carries a token on every page for any session.
+    """
+    page = client.get(path)
     marker = 'name="csrf_token" value="'
     start = page.text.index(marker) + len(marker)
     return page.text[start : page.text.index('"', start)]

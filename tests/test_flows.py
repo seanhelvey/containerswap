@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 import main
 from app.config import settings
 from app.db import SessionLocal, get_db
-from app.models import EventLog, User
+from app.models import EventLog, Listing, Message, User
 from tests.conftest import csrf_for, register
 
 
@@ -155,7 +155,13 @@ def test_signup_sends_a_verification_link(client, monkeypatch):
     sent: list[tuple] = []
     monkeypatch.setattr(account, "notify_verify_email", lambda *args: sent.append(args))
 
-    register(client, "alice")
+    # Not register(): that helper marks the account verified for the tests that
+    # need one working end to end. This test is about the unverified state itself.
+    client.post(
+        "/signup",
+        data={"email": "alice@example.com", "password": "correct-horse-battery"},
+        follow_redirects=False,
+    )
 
     with SessionLocal() as db:
         user = db.query(User).filter_by(email="alice@example.com").one()
@@ -174,12 +180,94 @@ def test_signup_sends_a_verification_link(client, monkeypatch):
 
 
 def test_an_invalid_verification_token_verifies_nobody(client):
-    register(client, "alice")
+    client.post(
+        "/signup",
+        data={"email": "alice@example.com", "password": "correct-horse-battery"},
+        follow_redirects=False,
+    )
     response = client.get("/verify-email/not-a-real-token", follow_redirects=False)
     assert response.status_code == 400
 
     with SessionLocal() as db:
         assert db.query(User).filter_by(email="alice@example.com").one().email_verified is False
+
+
+def test_unverified_user_sees_a_prompt_instead_of_the_post_form(client):
+    client.post(
+        "/signup",
+        data={"email": "alice@example.com", "password": "correct-horse-battery"},
+        follow_redirects=False,
+    )
+    page = client.get("/listings/new")
+    assert page.status_code == 200
+    assert 'name="title"' not in page.text
+
+
+def test_unverified_user_cannot_post_a_listing(client):
+    client.post(
+        "/signup",
+        data={"email": "alice@example.com", "password": "correct-horse-battery"},
+        follow_redirects=False,
+    )
+    token = csrf_for(client, "/")
+    response = client.post(
+        "/listings", data={"csrf_token": token, "title": "Jars"}, follow_redirects=False
+    )
+    assert response.status_code == 403
+
+    with SessionLocal() as db:
+        assert db.query(Listing).count() == 0
+
+
+def test_unverified_user_cannot_message_an_owner(client):
+    register(client, "owner")
+    owner_token = csrf_for(client)
+    client.post(
+        "/listings", data={"csrf_token": owner_token, "title": "Jars"}, follow_redirects=False
+    )
+    client.post("/logout", data={"csrf_token": owner_token}, follow_redirects=False)
+
+    client.post(
+        "/signup",
+        data={"email": "stranger@example.com", "password": "correct-horse-battery"},
+        follow_redirects=False,
+    )
+    detail = client.get("/listings/1")
+    assert 'action="/listings/1/contact"' not in detail.text
+
+    token = csrf_for(client, "/")
+    response = client.post(
+        "/listings/1/contact",
+        data={"csrf_token": token, "body": "Still available?"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+
+    with SessionLocal() as db:
+        assert db.query(Message).count() == 0
+
+
+def test_resend_verification_sends_another_token(client, monkeypatch):
+    from app.routes import account
+
+    client.post(
+        "/signup",
+        data={"email": "alice@example.com", "password": "correct-horse-battery"},
+        follow_redirects=False,
+    )
+
+    sent: list[tuple] = []
+    monkeypatch.setattr(account, "notify_verify_email", lambda *args: sent.append(args))
+    token = csrf_for(client, "/")
+    response = client.post(
+        "/resend-verification",
+        data={"csrf_token": token, "next": "/"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/?resent=1"
+    assert len(sent) == 1
+    assert sent[0][0] == "alice@example.com"
 
 
 def test_forgot_password_does_not_reveal_whether_an_account_exists(client):

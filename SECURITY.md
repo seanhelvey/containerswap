@@ -49,15 +49,12 @@ An instance is not safe to invite users to until all of these are true:
 
 Stated plainly rather than left for someone to discover:
 
-- **Signing up with an email you do not own works, until you use it.** There is no
-  block on signup, but nothing that depends on ownership works until the address is
-  proven: `/verify-email/{token}` (sent at signup) or `/reset-password/{token}`
-  (which verifies as a side effect of proving inbox control) are both required
-  first. Not a data-exposure bug — nothing private leaks — just a window where the
-  email column cannot yet be trusted.
-- **There is no way to resend a verification email.** If the first one is lost,
-  requesting a password reset has the same effect, since completing a reset also
-  marks the address verified.
+- **Posting and messaging require a verified email.** Signing up with an address you
+  do not own works, but nothing that reaches another person or the public listings
+  does, until the address is proven: `/verify-email/{token}` (sent at signup and
+  resendable from a banner shown to any logged-in, unverified account) or
+  `/reset-password/{token}` (which verifies as a side effect of proving inbox
+  control). Browsing and searching stay open to everyone, verified or not.
 - **There is no moderation queue.** Reports are written to a table and emailed to
   `CS_REPORT_EMAIL`, but a maintainer still has to read and act on each one by hand.
 - **Comments and messages are not filtered** for abuse beyond length caps.

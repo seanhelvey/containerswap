@@ -7,6 +7,9 @@ import re
 
 from playwright.sync_api import Page, expect
 
+from app.db import SessionLocal
+from app.models import User
+
 
 def test_signup_create_listing_and_view_it(page: Page, live_server_url: str):
     page.goto(f"{live_server_url}/signup")
@@ -15,6 +18,13 @@ def test_signup_create_listing_and_view_it(page: Page, live_server_url: str):
     page.locator('form[action="/signup"] button[type="submit"]').click()
 
     expect(page).to_have_url(f"{live_server_url}/")
+
+    # No inbox to click a real verification link from here — same shortcut
+    # tests/conftest.py's register() takes. Posting requires it either way.
+    with SessionLocal() as db:
+        user = db.query(User).filter_by(email="e2e@example.com").one()
+        user.email_verified = True
+        db.commit()
 
     page.goto(f"{live_server_url}/listings/new")
     page.locator('form[action="/listings"] input[name="title"]').fill("A dozen mason jars")

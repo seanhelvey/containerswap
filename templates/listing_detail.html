@@ -56,13 +56,15 @@
     <h2>{{ t('contact.title') }}</h2>
     <!-- The contact form IS the privacy boundary: no address is ever rendered. -->
     <p class="hint">{{ t('contact.intro') }}</p>
-    {% if current_user %}
+    {% if current_user and current_user.email_verified %}
       <form method="post" action="/listings/{{ listing.id }}/contact">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <textarea name="body" rows="3" required maxlength="2000"
                   placeholder="{{ t('contact.placeholder') }}"></textarea>
         <button class="button button-primary button-block" type="submit">{{ t('contact.send') }}</button>
       </form>
+    {% elif current_user %}
+      <p class="hint">{{ t('contact.verify_required') }}</p>
     {% else %}
       <a class="button button-primary button-block"
          href="/login?next=/listings/{{ listing.id }}">{{ t('contact.login_required') }}</a>

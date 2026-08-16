@@ -5,6 +5,10 @@
 {% block content %}
 <h1 class="page-title">{{ t('listing.new.title') }}</h1>
 
+{% if not current_user.email_verified %}
+<p>{{ t('listing.new.verify_required') }}</p>
+{% else %}
+
 {% if error_key %}<p class="alert alert-error">{{ t(error_key) }}</p>{% endif %}
 
 <form class="form" method="post" action="/listings" enctype="multipart/form-data">
@@ -85,6 +89,7 @@
 
   <button class="button button-primary button-block" type="submit">{{ t('listing.submit') }}</button>
 </form>
+{% endif %}
 {% endblock %}
 
 {% block head %}<link rel="stylesheet" href="/static/vendor/leaflet/leaflet.css">{% endblock %}

@@ -25,6 +25,7 @@ LIMITS: dict[str, tuple[int, int]] = {
     "report": (10, 3600),
     "forgot_password": (5, 3600),
     "reset_password": (10, 3600),
+    "resend_verification": (3, 3600),
 }
 
 

@@ -225,6 +225,11 @@ textarea { min-height: 88px; resize: vertical; }
   .alert-error, .alert-ok { background: var(--surface); }
 }
 
+.banner-verify {
+  max-width: 900px; margin: 12px auto 0; padding: 12px var(--pad);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px;
+}
+
 .safety-note {
   display: flex; gap: 10px; align-items: flex-start;
   background: var(--bg); border: 1px solid var(--line);

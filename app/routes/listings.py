@@ -118,6 +118,9 @@ async def create_listing(
     user: User = Depends(require_user),
     db: Session = Depends(get_db),
 ):
+    if not user.email_verified:
+        return render(request, "new_listing.html", status_code=403)
+
     title = title.strip()
     if not title:
         return _new_listing_error(request, "listing.error.title_required", locals())
@@ -194,6 +197,9 @@ def send_contact(
 ):
     """The only path between a sender and an owner. No address of any kind changes
     hands — the message lands in the owner's /inbox and nowhere else."""
+    if not user.email_verified:
+        return RedirectResponse(f"/listings/{listing_id}", status_code=303)
+
     listing = _get_listing(db, listing_id)
     text = body.strip()
     if not text:
