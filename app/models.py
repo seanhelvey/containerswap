@@ -54,6 +54,10 @@ class Listing(Base):
     lat: Mapped[float | None] = mapped_column(Float, nullable=True)
     lng: Mapped[float | None] = mapped_column(Float, nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="active", index=True)
+    # A planted listing that shows what an active marketplace looks like before one
+    # exists. Never presented as real: the detail page swaps the contact form for a
+    # disclosure, and this must stay excluded from any future impact counts.
+    is_seed: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, index=True

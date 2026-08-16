@@ -11,6 +11,7 @@
   <h1 class="page-title">{{ listing.title }}</h1>
 
   <p class="detail-meta">
+    {% if listing.is_seed %}<span class="pill pill-seed">{{ t('listing.seed_badge') }}</span>{% endif %}
     {% if listing.price %}<span class="pill pill-price">{{ listing.price }}</span>{% endif %}
     {% if listing.quantity %}<span class="pill">{{ listing.quantity }}</span>{% endif %}
     <span class="pill">{{ t('category.' ~ listing.category) }}</span>
@@ -43,7 +44,12 @@
   <p class="alert alert-ok">{{ t('report.done') }}</p>
 {% endif %}
 
-{% if is_owner %}
+{% if listing.is_seed %}
+  <section class="panel seed-panel">
+    <p>{{ t('listing.seed_banner') }}</p>
+    <a class="button button-primary button-block" href="/listings/new">{{ t('listing.seed_cta') }}</a>
+  </section>
+{% elif is_owner %}
   {% if listing.status != 'completed' %}
     <form method="post" action="/listings/{{ listing.id }}/complete">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -72,7 +78,7 @@
   </section>
 {% endif %}
 
-{% if current_user and not is_owner %}
+{% if current_user and not is_owner and not listing.is_seed %}
   <details class="panel report">
     <summary>{{ t('report.button') }}</summary>
     <form method="post" action="/listings/{{ listing.id }}/report">

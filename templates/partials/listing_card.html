@@ -8,7 +8,9 @@
         <svg viewBox="0 0 24 24"><path d="M7 2h10l1 3v15a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5zm1 5v13h8V7z"/></svg>
       </div>
     {% endif %}
-    {% if listing.status == 'completed' %}
+    {% if listing.is_seed %}
+      <span class="badge badge-seed">{{ t('listing.seed_badge') }}</span>
+    {% elif listing.status == 'completed' %}
       <span class="badge badge-done">{{ t('listing.completed_badge') }}</span>
     {% endif %}
   </div>
