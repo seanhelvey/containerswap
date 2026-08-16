@@ -10,7 +10,7 @@ from app.i18n import DEFAULT_LANG, negotiate, translate
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-CATEGORIES = ["jars", "deli", "yogurt", "other"]
+CATEGORIES = ["deli", "yogurt", "jars", "other"]
 
 
 def _lang(request: Request) -> str:
