@@ -51,6 +51,8 @@
   "listing.seed_badge": "Demo",
   "listing.seed_banner": "This is a sample listing, planted to show what an active site looks like. It isn't real, and nobody is on the other end of it.",
   "listing.seed_cta": "Post a real one",
+  "listing.mark_demo": "Mark as demo",
+  "listing.unmark_demo": "Remove demo label",
   "listing.mark_completed": "Mark as swapped",
   "listing.completed_note": "This listing is closed.",
   "listing.error.title_required": "Please give the listing a short title.",

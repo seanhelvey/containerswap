@@ -68,6 +68,34 @@ def test_only_the_owner_can_complete_a_listing(client):
     assert response.status_code == 403
 
 
+def test_owner_can_toggle_a_listing_as_demo(client):
+    """Self-service is_seed toggle, so marking a planted listing doesn't need psql."""
+    register(client, "owner")
+    token = csrf_for(client)
+    client.post("/listings", data={"csrf_token": token, "title": "Jars"}, follow_redirects=False)
+
+    client.post("/listings/1/toggle-demo", data={"csrf_token": token}, follow_redirects=False)
+    with SessionLocal() as db:
+        assert db.query(Listing).filter_by(id=1).one().is_seed is True
+
+    client.post("/listings/1/toggle-demo", data={"csrf_token": token}, follow_redirects=False)
+    with SessionLocal() as db:
+        assert db.query(Listing).filter_by(id=1).one().is_seed is False
+
+
+def test_a_stranger_cannot_toggle_someone_elses_listing_as_demo(client):
+    register(client, "owner")
+    token = csrf_for(client)
+    client.post("/listings", data={"csrf_token": token, "title": "Jars"}, follow_redirects=False)
+    client.post("/logout", data={"csrf_token": token}, follow_redirects=False)
+
+    register(client, "stranger")
+    response = client.post(
+        "/listings/1/toggle-demo", data={"csrf_token": csrf_for(client)}, follow_redirects=False
+    )
+    assert response.status_code == 403
+
+
 def test_posting_without_a_csrf_token_is_rejected(client):
     register(client, "alice")
     response = client.post("/listings", data={"title": "No token"}, follow_redirects=False)

@@ -44,7 +44,7 @@
   <p class="alert alert-ok">{{ t('report.done') }}</p>
 {% endif %}
 
-{% if listing.is_seed %}
+{% if listing.is_seed and not is_owner %}
   <section class="panel seed-panel">
     <p>{{ t('listing.seed_banner') }}</p>
     <a class="button button-primary button-block" href="/listings/new">{{ t('listing.seed_cta') }}</a>
@@ -56,6 +56,12 @@
       <button class="button button-primary button-block" type="submit">{{ t('listing.mark_completed') }}</button>
     </form>
   {% endif %}
+  <form method="post" action="/listings/{{ listing.id }}/toggle-demo">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="button button-secondary button-block" type="submit">
+      {{ t('listing.unmark_demo') if listing.is_seed else t('listing.mark_demo') }}
+    </button>
+  </form>
   <a class="button button-secondary button-block" href="/inbox">{{ t('nav.inbox') }}</a>
 {% elif listing.status == 'active' %}
   <section class="panel" id="contact">

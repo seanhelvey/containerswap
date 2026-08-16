@@ -271,6 +271,24 @@ def mark_completed(
     return RedirectResponse(f"/listings/{listing_id}", status_code=303)
 
 
+@router.post("/listings/{listing_id}/toggle-demo", dependencies=[Depends(verify_csrf)])
+def toggle_demo(
+    listing_id: int,
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    """Self-service is_seed toggle for the owner, so marking a planted listing as a
+    demo doesn't require psql. Owner-only the same way mark_completed is — nothing
+    stops a real user flipping this on their own real listing, but that only
+    neuters their own post, so it isn't worth guarding against."""
+    listing = _get_listing(db, listing_id)
+    if listing.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not your listing.")
+    listing.is_seed = not listing.is_seed
+    db.commit()
+    return RedirectResponse(f"/listings/{listing_id}", status_code=303)
+
+
 @router.get("/inbox")
 def inbox(request: Request, user: User = Depends(require_user), db: Session = Depends(get_db)):
     messages = (
