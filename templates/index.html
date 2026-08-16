@@ -12,11 +12,6 @@
   </h1>
 </section>
 
-<section class="hero-story">
-  <p class="hero-intro">{{ t('home.beta_intro') }}</p>
-  <a class="button button-secondary" href="/feedback">{{ t('feedback.cta') }}</a>
-</section>
-
 <ol class="how-it-works">
   <li><span class="how-step" aria-hidden="true">1</span><span>{{ t('home.how_1') }}</span></li>
   <li><span class="how-step" aria-hidden="true">2</span><span>{{ t('home.how_2') }}</span></li>
@@ -54,4 +49,9 @@
     <a class="button" href="/listings/new">{{ t('home.post_cta') }}</a>
   </div>
 {% endif %}
+
+<section class="hero-story">
+  <p class="hero-intro">{{ t('home.beta_intro') }}</p>
+  <a class="button button-secondary" href="/feedback">{{ t('feedback.cta') }}</a>
+</section>
 {% endblock %}
