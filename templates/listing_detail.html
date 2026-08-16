@@ -90,6 +90,6 @@
 {% block scripts %}
   {% if listing.lat is not none %}
     <script src="/static/vendor/leaflet/leaflet.js" defer></script>
-    <script src="/static/js/mini-map.js" defer></script>
+    <script src="{{ static_url('js/mini-map.js') }}" defer></script>
   {% endif %}
 {% endblock %}

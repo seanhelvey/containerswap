@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#1b5e3f">
   <title>{% block title %}{{ settings.site_name }}{% endblock %}</title>
   <meta name="description" content="{{ t('app.tagline') }}">
-  <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="{{ static_url('icons/icon.svg') }}" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="{{ static_url('css/app.css') }}">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -16,7 +16,7 @@
 
 <header class="topbar">
   <a class="brand" href="/">
-    <img src="/static/icons/icon.svg" alt="" width="28" height="28">
+    <img src="{{ static_url('icons/icon.svg') }}" alt="" width="28" height="28">
     <span>{{ settings.site_name }}</span>
   </a>
   {% if current_user %}
@@ -52,7 +52,7 @@
   </a>
 </nav>
 
-<script src="/static/js/app.js" defer></script>
+<script src="{{ static_url('js/app.js') }}" defer></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
