@@ -12,12 +12,18 @@
   </h1>
 </section>
 
-<ol class="how-it-works">
-  <li><span class="how-step" aria-hidden="true">1</span><span>{{ t('home.how_1') }}</span></li>
-  <li><span class="how-step" aria-hidden="true">2</span><span>{{ t('home.how_2') }}</span></li>
-  <li><span class="how-step" aria-hidden="true">3</span><span>{{ t('home.how_3') }}</span></li>
-</ol>
-<p class="hint how-it-works-note">{{ t('home.how_no_shipping') }}</p>
+{% if not q and not active_category %}
+  {# Landing state only. The moment someone has actually searched or filtered,
+     they're doing a task, not learning what the site is — the explainer would
+     just be noise between them and their results. See issue tracking the
+     fuller landing-vs-results split this is a cheap first step toward. #}
+  <ol class="how-it-works">
+    <li><span class="how-step" aria-hidden="true">1</span><span>{{ t('home.how_1') }}</span></li>
+    <li><span class="how-step" aria-hidden="true">2</span><span>{{ t('home.how_2') }}</span></li>
+    <li><span class="how-step" aria-hidden="true">3</span><span>{{ t('home.how_3') }}</span></li>
+  </ol>
+  <p class="hint how-it-works-note">{{ t('home.how_no_shipping') }}</p>
+{% endif %}
 
 <form class="searchbar" method="get" action="/" role="search">
   <input type="search" name="q" value="{{ q }}"
