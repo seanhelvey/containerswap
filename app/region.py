@@ -34,7 +34,10 @@ class Region:
 # Coverage favours countries likely to send real traffic; a missing one just falls
 # back to the global framing above rather than failing.
 REGIONS: dict[str, Region] = {
-    "US": Region("the United States", 38.9072, -77.0369),
+    # No US entry on purpose: naming the country reads as a political statement
+    # right now in a way "Kenya" or "Germany" doesn't. A US visitor gets the plain
+    # global tagline and the Humboldt default map view instead — which, being in the
+    # US, is already a reasonable default for them.
     "CA": Region("Canada", 45.4215, -75.6972),
     "MX": Region("Mexico", 19.4326, -99.1332),
     "GT": Region("Guatemala", 14.6349, -90.5069),
