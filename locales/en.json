@@ -106,7 +106,7 @@
   "report.reason_placeholder": "What is wrong with it?",
   "report.send": "Send report",
   "report.done": "Thank you. We will take a look.",
-  "feedback.cta": "Tell us what's confusing.",
+  "feedback.cta": "We'd love to hear from you.",
   "feedback.title": "Feedback",
   "feedback.intro": "We're in beta and building this in the open. Tell us what's confusing, broken, or missing — a maintainer reads every message.",
   "feedback.placeholder": "What's confusing, broken, or missing?",
