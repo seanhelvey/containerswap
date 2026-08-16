@@ -70,6 +70,12 @@ a { color: var(--green); }
   display: flex; align-items: center; gap: 8px;
   font-weight: 700; text-decoration: none; color: var(--ink);
 }
+.brand-group { display: flex; align-items: center; gap: 10px; }
+.beta-badge {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--green); border: 1px solid var(--green); border-radius: 999px;
+  padding: 2px 8px; text-decoration: none; white-space: nowrap;
+}
 
 main { padding: var(--pad); max-width: 900px; margin: 0 auto; }
 
@@ -87,9 +93,38 @@ main { padding: var(--pad); max-width: 900px; margin: 0 auto; }
 .tab.is-active { color: var(--green); font-weight: 600; }
 .tab-primary svg { fill: var(--green); }
 
+/* Below 640px the tab bar is a mobile app convention: pinned to the bottom
+   edge, thumb reach. Above it, nobody looks there — desktop nav lives near
+   the header, so reorder it next to .topbar instead of moving any markup. */
+@media (min-width: 640px) {
+  body { padding-bottom: 0; display: flex; flex-direction: column; }
+  .topbar { order: 0; }
+  .banner-verify { order: 2; }
+  #main { order: 3; }
+
+  .tabbar {
+    order: 1;
+    position: static;
+    display: flex; justify-content: center; gap: 8px;
+    border-top: none; border-bottom: 1px solid var(--line);
+    padding-bottom: 0;
+  }
+  .tab { flex-direction: row; gap: 6px; padding: 10px 16px; }
+}
+
 /* --- type --- */
 
-.hero h1 { font-size: 20px; line-height: 1.35; margin: 4px 0 16px; }
+.hero h1 { font-size: 28px; line-height: 1.25; letter-spacing: -.01em; margin: 8px 0 20px; }
+
+.hero-story {
+  background: #e8f5ee; border-radius: var(--radius);
+  padding: 18px var(--pad); margin: 0 0 20px;
+}
+.hero-story .hero-intro { color: var(--ink); font-size: 15px; line-height: 1.5; margin: 0 0 14px; }
+.hero-story .button { padding: 10px 18px; min-height: 40px; }
+@media (prefers-color-scheme: dark) {
+  .hero-story { background: var(--surface); }
+}
 .page-title { font-size: 24px; margin: 0 0 12px; }
 
 .hint { color: var(--ink-soft); font-size: 14px; margin: 6px 0; }

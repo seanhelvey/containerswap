@@ -65,6 +65,8 @@ class Settings(BaseSettings):
     # Must be on a domain verified with Resend, or every send is rejected.
     email_from: str = ""
     # Where abuse reports go. Unset means reports are logged and nothing else.
+    # Beta feedback (app/email.py:notify_new_feedback) reuses this too — one
+    # operator, one inbox, until there's a reason to split them.
     report_email: str = ""
     # Absolute base for links in emails; relative URLs are useless in a mail client.
     site_url: str = "http://127.0.0.1:8000"

@@ -57,4 +57,7 @@ Stated plainly rather than left for someone to discover:
   control). Browsing and searching stay open to everyone, verified or not.
 - **There is no moderation queue.** Reports are written to a table and emailed to
   `CS_REPORT_EMAIL`, but a maintainer still has to read and act on each one by hand.
+- **Beta feedback (`/feedback`) works the same way.** Written to a table and emailed
+  to `CS_REPORT_EMAIL` (shared with abuse reports — one operator, one inbox), read
+  and actioned by hand — no automated triage.
 - **Comments and messages are not filtered** for abuse beyond length caps.

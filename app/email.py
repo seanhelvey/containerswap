@@ -156,3 +156,23 @@ def notify_new_report(listing_id: int, listing_title: str, reason: str) -> None:
         f"Reason given:\n{reason or '(none)'}\n\n"
         f"{settings.site_url}/listings/{listing_id}",
     )
+
+
+@_never_fails
+def notify_new_feedback(message: str, contact_email: str) -> None:
+    """Tell the operator that someone left beta feedback.
+
+    Reuses CS_REPORT_EMAIL rather than a feedback-specific setting — one operator,
+    one inbox, for as long as that's true. contact_email is whatever the person
+    chose to type in, not a User.email — voluntary, given so the operator can
+    reply, and only ever seen here.
+    """
+    if not settings.report_email:
+        logger.warning("feedback was submitted but CS_REPORT_EMAIL is unset")
+        return
+
+    _send(
+        settings.report_email,
+        "New beta feedback",
+        f"{message}\n\nReply to: {contact_email or '(not given)'}",
+    )

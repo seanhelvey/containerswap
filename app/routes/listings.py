@@ -16,11 +16,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app import email, events, ratelimit, storage
-from app.auth import require_user, verify_csrf
+from app.auth import get_current_user, require_user, verify_csrf
 from app.db import get_db
 from app.geo import fuzz, parse_latlng
 from app.images import ImageRejected, process_upload
-from app.models import Listing, Message, Report, User
+from app.models import Feedback, Listing, Message, Report, User
 from app.templating import CATEGORIES, render
 
 logger = logging.getLogger("containerswap")
@@ -294,6 +294,43 @@ def inbox(request: Request, user: User = Depends(require_user), db: Session = De
     )
 
     return render(request, "inbox.html", {"messages": messages, "my_listings": mine})
+
+
+@router.get("/feedback")
+def feedback_form(request: Request):
+    return render(request, "feedback.html")
+
+
+@router.post("/feedback", dependencies=[Depends(ratelimit.limiter("feedback"))])
+def submit_feedback(
+    background: BackgroundTasks,
+    message: str = Form(""),
+    contact_email: str = Form(""),
+    website: str = Form(""),
+    user: User | None = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Not behind require_user or verify_csrf, on purpose — people are often most
+    motivated to flag something confusing before they've signed up, and there is no
+    session to carry a CSRF token until then. Protected the same way signup is:
+    honeypot plus rate limit."""
+    if website:
+        # Honeypot: respond exactly like a real submission so nothing tells a bot
+        # it was caught.
+        return RedirectResponse("/feedback?sent=1", status_code=303)
+
+    text = message.strip()
+    if not text:
+        return RedirectResponse("/feedback", status_code=303)
+
+    contact = contact_email.strip()[:255]
+    db.add(Feedback(user_id=user.id if user else None, contact_email=contact, message=text[:4000]))
+    db.commit()
+
+    # Without this the row is the end of the road, same reasoning as report_listing.
+    background.add_task(email.notify_new_feedback, text, contact)
+
+    return RedirectResponse("/feedback?sent=1", status_code=303)
 
 
 def _get_listing(db: Session, listing_id: int) -> Listing:

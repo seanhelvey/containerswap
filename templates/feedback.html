@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ t('feedback.title') }} · {{ settings.site_name }}{% endblock %}
+
+{% block content %}
+<h1 class="page-title">{{ t('feedback.title') }}</h1>
+<p class="hint">{{ t('feedback.intro') }}</p>
+
+{% if request.query_params.get('sent') %}
+  <p class="alert alert-ok">{{ t('feedback.sent') }}</p>
+{% else %}
+<form class="form" method="post" action="/feedback">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="hp-field" aria-hidden="true">
+    <label for="website">{{ t('auth.hp_label') }}</label>
+    <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+  </div>
+
+  <textarea name="message" rows="4" required maxlength="4000"
+            placeholder="{{ t('feedback.placeholder') }}"></textarea>
+
+  <label class="field">
+    <span>{{ t('feedback.contact_email') }} <em>{{ t('common.optional') }}</em></span>
+    <input type="email" name="contact_email" maxlength="255"
+           autocomplete="email" autocapitalize="none" spellcheck="false">
+    <small class="hint">{{ t('feedback.contact_email_hint') }}</small>
+  </label>
+
+  <button class="button button-primary button-block" type="submit">{{ t('feedback.send') }}</button>
+</form>
+{% endif %}
+{% endblock %}

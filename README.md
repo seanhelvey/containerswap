@@ -127,7 +127,7 @@ marked Secret **at creation** — the toggle disappears afterwards:
 | `CS_SUPABASE_SERVICE_KEY` | a **secret** key — publishable and anon cannot write |
 | `CS_RESEND_API_KEY` | Resend API key; without it nobody is told they have a message |
 | `CS_EMAIL_FROM` | an address on a domain verified with Resend |
-| `CS_REPORT_EMAIL` | where abuse reports go |
+| `CS_REPORT_EMAIL` | where abuse reports *and* beta feedback (`/feedback`) go |
 | `CS_SITE_URL` | `https://…` — used for links in emails |
 | `CS_HOME_REGION` | e.g. `Humboldt County`, or leave empty |
 

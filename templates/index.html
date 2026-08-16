@@ -12,6 +12,11 @@
   </h1>
 </section>
 
+<section class="hero-story">
+  <p class="hero-intro">{{ t('home.beta_intro') }}</p>
+  <a class="button button-secondary" href="/feedback">{{ t('feedback.cta') }}</a>
+</section>
+
 <form class="searchbar" method="get" action="/" role="search">
   <input type="search" name="q" value="{{ q }}"
          placeholder="{{ t('home.search_placeholder') }}"

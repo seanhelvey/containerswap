@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 import main
 from app.config import settings
 from app.db import SessionLocal, get_db
-from app.models import EventLog, Listing, Message, User
+from app.models import EventLog, Feedback, Listing, Message, User
 from tests.conftest import csrf_for, register
 
 
@@ -459,6 +459,53 @@ def test_a_report_reaches_a_human(client, monkeypatch):
     )
 
     assert sent == [(1, "Jars", "not food safe")]
+
+
+def test_feedback_reaches_a_human_without_an_account(client, monkeypatch):
+    """Feedback has to work signed out — that's often when people notice something
+    confusing, before they've made an account at all."""
+    from app import email
+
+    sent: list[tuple] = []
+    monkeypatch.setattr(email, "notify_new_feedback", lambda *args: sent.append(args))
+
+    response = client.post(
+        "/feedback",
+        data={"message": "the map is confusing", "contact_email": "me@example.com"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/feedback?sent=1"
+    assert sent == [("the map is confusing", "me@example.com")]
+
+    with SessionLocal() as db:
+        row = db.query(Feedback).one()
+        assert row.user_id is None
+        assert row.contact_email == "me@example.com"
+
+
+def test_feedback_honeypot_silently_drops_it(client):
+    """A filled hp-field means a bot filled every input; give it a convincing no-op."""
+    response = client.post(
+        "/feedback",
+        data={"message": "buy cheap watches", "website": "http://spam.example"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/feedback?sent=1"
+
+    with SessionLocal() as db:
+        assert db.query(Feedback).count() == 0
+
+
+def test_feedback_flood_is_rate_limited(client):
+    """LIMITS['feedback'] is (10, 3600) — the 11th attempt in the window should 429."""
+    for i in range(10):
+        response = client.post("/feedback", data={"message": f"note {i}"}, follow_redirects=False)
+        assert response.status_code == 303, response.text
+
+    response = client.post("/feedback", data={"message": "one too many"}, follow_redirects=False)
+    assert response.status_code == 429
 
 
 def test_a_mail_outage_does_not_lose_the_message(client, monkeypatch):

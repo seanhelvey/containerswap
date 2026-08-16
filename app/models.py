@@ -100,6 +100,24 @@ class Report(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class Feedback(Base):
+    """Beta feedback, not tied to a listing. Anonymous on purpose — the moments people
+    most want to flag something confusing are often before they've signed up, so this
+    is reachable without a session the way signup is (honeypot + rate limit, no CSRF)."""
+
+    __tablename__ = "feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    # Voluntary, so we can close the loop with someone. Never rendered anywhere —
+    # same treatment as User.email — only ever read by a human via email/psql.
+    contact_email: Mapped[str] = mapped_column(String(255), default="")
+    message: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class EventLog(Base):
     """The entire v1 analytics layer. No dashboard — just queryable rows.
 
