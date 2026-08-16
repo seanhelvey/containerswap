@@ -21,14 +21,18 @@
   </button>
 </form>
 
-<nav class="chips" aria-label="{{ t('listing.category') }}">
-  <a class="chip {% if not active_category %}is-active{% endif %}"
-     href="/{% if q %}?q={{ q }}{% endif %}">{{ t('home.all') }}</a>
+<a class="chip {% if not active_tags %}is-active{% endif %}"
+   href="/{% if q %}?q={{ q }}{% endif %}">{{ t('home.all') }}</a>
+<form class="chips" method="get" action="/" aria-label="{{ t('listing.category') }}" data-autosubmit>
+  {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
   {% for cat in categories %}
-    <a class="chip {% if active_category == cat %}is-active{% endif %}"
-       href="/?category={{ cat }}{% if q %}&q={{ q }}{% endif %}">{{ t('category.' ~ cat) }}</a>
+    <label class="chip">
+      <input type="checkbox" class="visually-hidden" name="tags" value="{{ cat }}"
+             {% if cat in active_tags %}checked{% endif %}>
+      {{ t('category.' ~ cat) }}
+    </label>
   {% endfor %}
-</nav>
+</form>
 
 {% if listings %}
   <div class="grid">

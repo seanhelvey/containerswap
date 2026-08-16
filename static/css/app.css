@@ -219,13 +219,21 @@ main { padding: var(--pad); max-width: 900px; margin: 0 auto; }
 .searchbar button svg { fill: #fff; }
 
 .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; }
+/* Same chip look inside the post/edit-listing form, but wrapping rather than
+   horizontal-scrolling — it's a field in a form, not a nav bar. */
+.chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
   flex: 0 0 auto; padding: 10px 14px; min-height: 44px;
-  display: inline-flex; align-items: center;
+  display: inline-flex; align-items: center; cursor: pointer;
   border: 2px solid var(--line); border-radius: 999px;
   text-decoration: none; color: var(--ink); font-size: 14px; background: var(--surface);
 }
-.chip.is-active { border-color: var(--green); color: var(--green); font-weight: 600; }
+/* is-active covers the "All" link (a plain <a>, no checkbox to key off of);
+   :has(:checked) covers every checkbox-backed chip, home-page filters and the
+   listing form alike — CSS-only, so the create/edit form's chips update the
+   instant you click one, without waiting on a server round-trip. */
+.chip.is-active,
+.chip:has(input:checked) { border-color: var(--green); color: var(--green); font-weight: 600; }
 
 /* --- cards --- */
 

@@ -10,7 +10,7 @@ from app.i18n import DEFAULT_LANG, negotiate, translate
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-CATEGORIES = ["deli", "yogurt", "bottles", "jars", "storage", "other"]
+TAGS = ["deli", "yogurt", "bottles", "bags", "jars", "bins", "upcycled", "other"]
 
 
 def _lang(request: Request) -> str:
@@ -47,7 +47,7 @@ def render(request: Request, template: str, context: dict | None = None, **kwarg
         "lang": lang,
         "t": lambda key, **params: translate(key, lang, **params),
         "settings": settings,
-        "categories": CATEGORIES,
+        "categories": TAGS,
         # Templates must not build upload URLs themselves: the path differs between
         # local disk and the object store, and hardcoding /uploads/ silently 404s in
         # production.

@@ -48,7 +48,6 @@ class Listing(Base):
     # Free text on purpose: "$5", "500 KSh", "free", "trade for basil starts".
     # A structured currency field would exclude barter and most of the world.
     price: Mapped[str] = mapped_column(String(60), default="")
-    category: Mapped[str] = mapped_column(String(40), default="other", index=True)
     image_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # Jittered before storage — see app.geo.fuzz. The exact location is never persisted.
     lat: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -64,10 +63,37 @@ class Listing(Base):
     )
 
     owner: Mapped[User] = relationship(back_populates="listings")
+    # Genuinely multi-valued and, for now, a single flat vocabulary — a bundled lot
+    # can honestly be both jars and bottles, and "upcycled" lives in the same list
+    # as the shape tags rather than its own column. Tags may eventually want a
+    # kind/flavor split (shape vs. state) if that distinction proves worth encoding,
+    # but that's undecided, so this doesn't build for it yet.
+    tags: Mapped[list["ListingTag"]] = relationship(
+        back_populates="listing", cascade="all, delete-orphan"
+    )
 
     @property
     def is_active(self) -> bool:
         return self.status == "active"
+
+    @property
+    def tag_slugs(self) -> list[str]:
+        return [t.tag for t in self.tags]
+
+
+class ListingTag(Base):
+    """One row per (listing, tag). A plain fixed vocabulary validated against
+    app.templating.TAGS, not a user-defined tag system — same spirit as the single
+    `category` column this replaces, just no longer mutually exclusive."""
+
+    __tablename__ = "listing_tags"
+
+    listing_id: Mapped[int] = mapped_column(
+        ForeignKey("listings.id", ondelete="CASCADE"), primary_key=True
+    )
+    tag: Mapped[str] = mapped_column(String(40), primary_key=True, index=True)
+
+    listing: Mapped[Listing] = relationship(back_populates="tags")
 
 
 class Message(Base):

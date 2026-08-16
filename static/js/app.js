@@ -33,3 +33,10 @@ document.querySelectorAll('form[data-confirm]').forEach((form) => {
     if (!window.confirm(form.dataset.confirm)) event.preventDefault();
   });
 });
+
+// Filter chips submit themselves on change instead of needing a separate "Apply"
+// button. A data attribute, not an inline onchange: the CSP's script-src 'self'
+// blocks inline event handlers same as it would inline <script> content.
+document.querySelectorAll('form[data-autosubmit] input').forEach((field) => {
+  field.addEventListener('change', () => field.form.submit());
+});

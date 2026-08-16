@@ -7,6 +7,7 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Query,
     Request,
     UploadFile,
 )
@@ -20,8 +21,8 @@ from app.auth import get_current_user, require_user, verify_csrf
 from app.db import get_db
 from app.geo import fuzz, parse_latlng
 from app.images import ImageRejected, process_upload
-from app.models import Feedback, Listing, Message, Report, User
-from app.templating import CATEGORIES, render
+from app.models import Feedback, Listing, ListingTag, Message, Report, User
+from app.templating import TAGS, render
 
 logger = logging.getLogger("containerswap")
 
@@ -31,7 +32,12 @@ PAGE_SIZE = 24
 
 
 @router.get("/")
-def home(request: Request, q: str = "", category: str = "", db: Session = Depends(get_db)):
+def home(
+    request: Request,
+    q: str = "",
+    tags: list[str] = Query([]),
+    db: Session = Depends(get_db),
+):
     query = (
         select(Listing)
         .options(selectinload(Listing.owner))
@@ -42,14 +48,20 @@ def home(request: Request, q: str = "", category: str = "", db: Session = Depend
     if term:
         like = f"%{term}%"
         query = query.where(Listing.title.ilike(like) | Listing.body.ilike(like))
-    if category in CATEGORIES:
-        query = query.where(Listing.category == category)
+
+    # OR across whatever's selected: a listing matching any chosen tag qualifies,
+    # not just one matching all of them.
+    active_tags = [t for t in tags if t in TAGS]
+    if active_tags:
+        query = query.where(
+            Listing.id.in_(select(ListingTag.listing_id).where(ListingTag.tag.in_(active_tags)))
+        )
 
     listings = db.execute(query.limit(PAGE_SIZE)).scalars().all()
     return render(
         request,
         "index.html",
-        {"listings": listings, "q": term, "active_category": category},
+        {"listings": listings, "q": term, "active_tags": active_tags},
     )
 
 
@@ -64,6 +76,7 @@ def listings_geojson(db: Session = Depends(get_db)):
     rows = (
         db.execute(
             select(Listing)
+            .options(selectinload(Listing.tags))
             .where(Listing.status == "active", Listing.lat.is_not(None))
             .order_by(Listing.created_at.desc())
             .limit(500)
@@ -84,7 +97,7 @@ def listings_geojson(db: Session = Depends(get_db)):
                         "title": row.title,
                         "price": row.price,
                         "quantity": row.quantity,
-                        "category": row.category,
+                        "tags": row.tag_slugs,
                         "url": f"/listings/{row.id}",
                         "image": storage.url_for(row.image_path),
                         "is_seed": row.is_seed,
@@ -112,7 +125,7 @@ async def create_listing(
     body: str = Form(""),
     quantity: str = Form(""),
     price: str = Form(""),
-    category: str = Form("other"),
+    tags: list[str] = Form([]),
     lat: str = Form(""),
     lng: str = Form(""),
     image: UploadFile | None = File(None),
@@ -145,12 +158,13 @@ async def create_listing(
     coords = parse_latlng(lat, lng)
     stored_lat, stored_lng = fuzz(*coords) if coords else (None, None)
 
+    selected_tags = [t for t in tags if t in TAGS] or ["other"]
     listing = Listing(
         title=title[:120],
         body=body.strip()[:4000],
         quantity=quantity.strip()[:60],
         price=price.strip()[:60],
-        category=category if category in CATEGORIES else "other",
+        tags=[ListingTag(tag=t) for t in selected_tags],
         image_path=image_path,
         lat=stored_lat,
         lng=stored_lng,
@@ -312,7 +326,7 @@ def edit_listing_form(
             "body": listing.body,
             "quantity": listing.quantity,
             "price": listing.price,
-            "category": listing.category,
+            "tags": listing.tag_slugs,
             "lat": listing.lat,
             "lng": listing.lng,
         },
@@ -330,7 +344,7 @@ async def edit_listing(
     body: str = Form(""),
     quantity: str = Form(""),
     price: str = Form(""),
-    category: str = Form("other"),
+    tags: list[str] = Form([]),
     lat: str = Form(""),
     lng: str = Form(""),
     image: UploadFile | None = File(None),
@@ -373,11 +387,12 @@ async def edit_listing(
     else:
         stored_lat, stored_lng = fuzz(*coords)
 
+    selected_tags = [t for t in tags if t in TAGS] or ["other"]
     listing.title = title[:120]
     listing.body = body.strip()[:4000]
     listing.quantity = quantity.strip()[:60]
     listing.price = price.strip()[:60]
-    listing.category = category if category in CATEGORIES else "other"
+    listing.tags = [ListingTag(tag=t) for t in selected_tags]
     listing.image_path = image_path
     listing.lat = stored_lat
     listing.lng = stored_lng
@@ -468,7 +483,9 @@ def submit_feedback(
 
 def _get_listing(db: Session, listing_id: int) -> Listing:
     listing = db.execute(
-        select(Listing).options(selectinload(Listing.owner)).where(Listing.id == listing_id)
+        select(Listing)
+        .options(selectinload(Listing.owner), selectinload(Listing.tags))
+        .where(Listing.id == listing_id)
     ).scalar_one_or_none()
     if listing is None:
         raise HTTPException(status_code=404, detail="Listing not found.")
@@ -478,7 +495,8 @@ def _get_listing(db: Session, listing_id: int) -> Listing:
 def _new_listing_error(
     request: Request, error_key: str, form: dict, listing: Listing | None = None
 ):
-    keep = {k: form.get(k, "") for k in ("title", "body", "quantity", "price", "category")}
+    keep = {k: form.get(k, "") for k in ("title", "body", "quantity", "price")}
+    keep["tags"] = form.get("tags", [])
     context = {"error_key": error_key, **keep}
     if listing is not None:
         context["listing"] = listing

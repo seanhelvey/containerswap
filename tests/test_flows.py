@@ -56,7 +56,7 @@ def test_full_listing_lifecycle_logs_every_analytics_event(client):
             "title": "Yogurt tubs",
             "quantity": "12 assorted",
             "price": "trade for basil starts",
-            "category": "yogurt",
+            "tags": "yogurt",
             "lat": "40.8021",
             "lng": "-124.1637",
         },
@@ -74,6 +74,69 @@ def test_full_listing_lifecycle_logs_every_analytics_event(client):
     assert completed.status_code == 303
 
     assert event_types() == ["listing_created", "listing_viewed", "listing_completed"]
+
+
+def test_filtering_by_multiple_tags_matches_either_one(client):
+    register(client, "alice")
+    token = csrf_for(client)
+    client.post("/listings", data={"csrf_token": token, "title": "Bottle lot", "tags": "bottles"})
+    client.post("/listings", data={"csrf_token": token, "title": "Jar lot", "tags": "jars"})
+    client.post("/listings", data={"csrf_token": token, "title": "Takeout stack", "tags": "deli"})
+
+    home = client.get("/", params={"tags": ["bottles", "jars"]}).text
+    assert "Bottle lot" in home
+    assert "Jar lot" in home
+    assert "Takeout stack" not in home
+
+
+def test_a_listing_can_carry_more_than_one_tag(client):
+    """A bundled lot can honestly be more than one shape at once — the whole reason
+    this replaced a single mutually-exclusive category."""
+    register(client, "alice")
+    token = csrf_for(client)
+    client.post(
+        "/listings",
+        data={"csrf_token": token, "title": "Mixed lot", "tags": ["bottles", "jars"]},
+    )
+    detail = client.get("/listings/1").text
+    assert "Bottles" in detail
+    assert "Jars" in detail
+
+
+def test_upcycled_is_just_another_tag_and_filters_the_same_way(client):
+    register(client, "alice")
+    token = csrf_for(client)
+    client.post(
+        "/listings",
+        data={"csrf_token": token, "title": "Plarn tote", "tags": ["bags", "upcycled"]},
+    )
+    client.post("/listings", data={"csrf_token": token, "title": "Plain bag", "tags": "bags"})
+
+    upcycled_only = client.get("/", params={"tags": "upcycled"}).text
+    assert "Plarn tote" in upcycled_only
+    assert "Plain bag" not in upcycled_only
+
+
+def test_no_valid_tags_submitted_falls_back_to_other(client):
+    register(client, "alice")
+    token = csrf_for(client)
+    client.post("/listings", data={"csrf_token": token, "title": "Mystery item"})
+    assert "Other" in client.get("/listings/1").text
+
+
+def test_editing_a_listing_replaces_its_tags_cleanly(client):
+    register(client, "alice")
+    token = csrf_for(client)
+    client.post("/listings", data={"csrf_token": token, "title": "First listing", "tags": "jars"})
+    client.post(
+        "/listings/1/edit",
+        data={"csrf_token": token, "title": "First listing", "tags": ["bottles", "bags"]},
+        follow_redirects=False,
+    )
+    detail_meta = client.get("/listings/1").text.split("detail-meta")[1].split("</p>")[0]
+    assert "Jars" not in detail_meta
+    assert "Bottles" in detail_meta
+    assert "Bags" in detail_meta
 
 
 def test_only_the_owner_can_complete_a_listing(client):
@@ -703,7 +766,7 @@ def test_geojson_exposes_only_public_fields(client):
         "title",
         "price",
         "quantity",
-        "category",
+        "tags",
         "url",
         "image",
         "is_seed",
