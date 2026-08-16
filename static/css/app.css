@@ -388,3 +388,4 @@ textarea { min-height: 88px; resize: vertical; }
 .mini-map { height: 200px; border-radius: var(--radius); margin: 16px 0 4px; background: var(--bg); }
 .map-hint { text-align: center; }
 .leaflet-container { border-radius: var(--radius); font: inherit; }
+.map-results { margin-top: 16px; }
