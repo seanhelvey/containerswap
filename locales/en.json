@@ -39,6 +39,8 @@
   "category.jars": "Jars",
   "category.deli": "Deli",
   "category.yogurt": "Yogurt",
+  "category.bottles": "Bottles",
+  "category.storage": "Storage",
   "category.other": "Other",
   "map.title": "Map",
   "map.locate": "Find my location",
