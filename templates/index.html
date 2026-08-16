@@ -21,15 +21,15 @@
   </button>
 </form>
 
-<a class="chip {% if not active_tags %}is-active{% endif %}"
-   href="/{% if q %}?q={{ q }}{% endif %}">{{ t('home.all') }}</a>
 <form class="chips" method="get" action="/" aria-label="{{ t('listing.category') }}" data-autosubmit>
   {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+  <a class="chip {% if not active_tags %}is-active{% endif %}"
+     href="/{% if q %}?q={{ q }}{% endif %}">{{ t('home.all') }}</a>
   {% for cat in categories %}
     <label class="chip">
       <input type="checkbox" class="visually-hidden" name="tags" value="{{ cat }}"
              {% if cat in active_tags %}checked{% endif %}>
-      {{ t('category.' ~ cat) }}
+      {% include "partials/category_icon.html" %}{{ t('category.' ~ cat) }}
     </label>
   {% endfor %}
 </form>

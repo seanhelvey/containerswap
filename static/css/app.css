@@ -224,10 +224,11 @@ main { padding: var(--pad); max-width: 900px; margin: 0 auto; }
 .chip-group { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
   flex: 0 0 auto; padding: 10px 14px; min-height: 44px;
-  display: inline-flex; align-items: center; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
   border: 2px solid var(--line); border-radius: 999px;
   text-decoration: none; color: var(--ink); font-size: 14px; background: var(--surface);
 }
+.chip-icon { width: 16px; height: 16px; flex-shrink: 0; fill: currentColor; }
 /* is-active covers the "All" link (a plain <a>, no checkbox to key off of);
    :has(:checked) covers every checkbox-backed chip, home-page filters and the
    listing form alike — CSS-only, so the create/edit form's chips update the
@@ -258,9 +259,10 @@ main { padding: var(--pad); max-width: 900px; margin: 0 auto; }
 .card-date { display: block; font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
 
 .pill {
-  display: inline-block; padding: 3px 8px; font-size: 12px;
+  display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; font-size: 12px;
   border-radius: 999px; background: var(--bg); border: 1px solid var(--line);
 }
+.pill .chip-icon { width: 13px; height: 13px; }
 .pill-price { background: var(--green); color: #fff; border-color: var(--green); font-weight: 600; }
 
 .badge {

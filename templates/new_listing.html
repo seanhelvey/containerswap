@@ -54,7 +54,7 @@
         <label class="chip">
           <input type="checkbox" class="visually-hidden" name="tags" value="{{ cat }}"
                  {% if cat in (tags|default([])) %}checked{% endif %}>
-          {{ t('category.' ~ cat) }}
+          {% include "partials/category_icon.html" %}{{ t('category.' ~ cat) }}
         </label>
       {% endfor %}
     </div>

@@ -14,7 +14,9 @@
     {% if listing.is_seed %}<span class="pill pill-seed">{{ t('listing.seed_badge') }}</span>{% endif %}
     {% if listing.price %}<span class="pill pill-price">{{ listing.price }}</span>{% endif %}
     {% if listing.quantity %}<span class="pill">{{ listing.quantity }}</span>{% endif %}
-    {% for tag in listing.tag_slugs %}<span class="pill">{{ t('category.' ~ tag) }}</span>{% endfor %}
+    {% for tag in listing.tag_slugs %}
+      <span class="pill">{% with cat = tag %}{% include "partials/category_icon.html" %}{% endwith %}{{ t('category.' ~ tag) }}</span>
+    {% endfor %}
   </p>
 
   <p class="detail-byline">
