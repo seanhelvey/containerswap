@@ -70,6 +70,11 @@ class Settings(BaseSettings):
     report_email: str = ""
     # Absolute base for links in emails; relative URLs are useless in a mail client.
     site_url: str = "http://127.0.0.1:8000"
+    # Local-dev convenience only: pop verification/reset links open in a browser
+    # instead of needing to copy them out of the console. Only ever consulted
+    # inside email.py's already-local-only branch (email_enabled is False), so
+    # this can't do anything in production even if left on by accident.
+    dev_auto_open_links: bool = False
 
     @field_validator("supabase_url", "site_url")
     @classmethod

@@ -18,6 +18,8 @@ Callers run these through BackgroundTasks, after the response is already committ
 
 import functools
 import logging
+import os
+import webbrowser
 from collections.abc import Callable
 from typing import ParamSpec
 
@@ -53,7 +55,7 @@ def _never_fails(func: Callable[P, None]) -> Callable[P, None]:
     return wrapper
 
 
-def _send(to: str, subject: str, body: str) -> None:
+def _send(to: str, subject: str, body: str, link: str | None = None) -> None:
     """Send one plain-text email. Never raises."""
     if not settings.email_enabled:
         # Local development. Print the whole thing to the console instead of sending
@@ -66,6 +68,12 @@ def _send(to: str, subject: str, body: str) -> None:
         logger.warning(
             "email not configured — would have sent:\n  subject: %s\n\n%s\n", subject, body
         )
+        # Opt-in convenience, off by default: skips the "copy the link out of the
+        # terminal" step for flows that block on clicking one. Guarded on
+        # PYTEST_CURRENT_TEST too, so a developer's own CS_DEV_AUTO_OPEN_LINKS=true
+        # in their .env can't pop up a browser mid test-run.
+        if link and settings.dev_auto_open_links and "PYTEST_CURRENT_TEST" not in os.environ:
+            webbrowser.open(link)
         return
 
     try:
@@ -110,12 +118,14 @@ def notify_new_message(recipient_email: str, sender_name: str, listing_title: st
 @_never_fails
 def notify_verify_email(to: str, token: str) -> None:
     """Send the link that proves an address is real and reachable."""
+    link = f"{settings.site_url}/verify-email/{token}"
     _send(
         to,
         "Confirm your email",
         f"Confirm your email to finish setting up your account:\n\n"
-        f"{settings.site_url}/verify-email/{token}\n\n"
+        f"{link}\n\n"
         f"If you did not sign up for {settings.site_name}, ignore this message.",
+        link=link,
     )
 
 
@@ -127,13 +137,15 @@ def notify_password_reset(to: str, token: str) -> None:
     itself proof the recipient controls the inbox, which is the same proof
     verification exists to get.
     """
+    link = f"{settings.site_url}/reset-password/{token}"
     _send(
         to,
         "Reset your password",
         f"Someone (hopefully you) asked to reset your {settings.site_name} password:\n\n"
-        f"{settings.site_url}/reset-password/{token}\n\n"
+        f"{link}\n\n"
         f"This link expires in an hour and works once. If you did not request this, "
         f"ignore it and your password will stay the same.",
+        link=link,
     )
 
 
