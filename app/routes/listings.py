@@ -49,47 +49,85 @@ def _search_filter(query, q: str, tags: list[str]):
     return query, term, active_tags
 
 
+def _order_by_distance(query, coords: tuple[float, float] | None):
+    """Near-me sorts instead of filtering, so it never produces an empty page — it
+    just reorders. Squared-degree distance rather than true great-circle: cheap,
+    needs no trig functions in SQL, and coordinates are already fuzzed by up to a
+    few hundred metres, so exact ranking accuracy was never available anyway."""
+    if coords is None:
+        return query.order_by(Listing.created_at.desc())
+    lat, lng = coords
+    dist = (Listing.lat - lat) * (Listing.lat - lat) + (Listing.lng - lng) * (Listing.lng - lng)
+    return query.order_by(dist.asc(), Listing.created_at.desc())
+
+
 @router.get("/")
 def home(
     request: Request,
     q: str = "",
     tags: list[str] = Query([]),
+    lat: str = "",
+    lng: str = "",
     db: Session = Depends(get_db),
 ):
-    query = (
-        select(Listing)
-        .options(selectinload(Listing.owner))
-        .where(Listing.status == "active")
-        .order_by(Listing.created_at.desc())
-    )
+    coords = parse_latlng(lat, lng)
+    query = select(Listing).options(selectinload(Listing.owner)).where(Listing.status == "active")
     query, term, active_tags = _search_filter(query, q, tags)
+    query = _order_by_distance(query, coords)
 
     listings = db.execute(query.limit(PAGE_SIZE)).scalars().all()
     return render(
         request,
         "index.html",
-        {"listings": listings, "q": term, "active_tags": active_tags},
+        {
+            "listings": listings,
+            "q": term,
+            "active_tags": active_tags,
+            "near_me": coords is not None,
+            "lat": coords[0] if coords else "",
+            "lng": coords[1] if coords else "",
+        },
     )
 
 
 @router.get("/map")
-def map_view(request: Request, q: str = "", tags: list[str] = Query([])):
+def map_view(
+    request: Request, q: str = "", tags: list[str] = Query([]), lat: str = "", lng: str = ""
+):
+    coords = parse_latlng(lat, lng)
     _, term, active_tags = _search_filter(select(Listing), q, tags)
-    return render(request, "map.html", {"q": term, "active_tags": active_tags})
+    return render(
+        request,
+        "map.html",
+        {
+            "q": term,
+            "active_tags": active_tags,
+            "near_me": coords is not None,
+            "lat": coords[0] if coords else "",
+            "lng": coords[1] if coords else "",
+        },
+    )
 
 
 @router.get("/api/listings.geojson")
-def listings_geojson(q: str = "", tags: list[str] = Query([]), db: Session = Depends(get_db)):
+def listings_geojson(
+    q: str = "",
+    tags: list[str] = Query([]),
+    lat: str = "",
+    lng: str = "",
+    db: Session = Depends(get_db),
+):
     """Map pins. Coordinates here are already fuzzed — see app.geo. Takes the same
-    `q`/`tags` params as `/` so the map can be filtered instead of always showing
-    every active listing."""
+    `q`/`tags`/`lat`/`lng` params as `/` so the map can be filtered and "near me"
+    sorted instead of always showing every active listing in creation order."""
+    coords = parse_latlng(lat, lng)
     query = (
         select(Listing)
         .options(selectinload(Listing.tags))
         .where(Listing.status == "active", Listing.lat.is_not(None))
-        .order_by(Listing.created_at.desc())
     )
     query, _, _ = _search_filter(query, q, tags)
+    query = _order_by_distance(query, coords)
     rows = db.execute(query.limit(500)).scalars().all()
 
     return JSONResponse(

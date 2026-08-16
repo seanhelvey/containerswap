@@ -18,6 +18,8 @@
   const params = new URLSearchParams();
   if (el.dataset.q) params.set('q', el.dataset.q);
   el.dataset.tags.split(',').filter(Boolean).forEach((tag) => params.append('tags', tag));
+  if (el.dataset.nearLat) params.set('lat', el.dataset.nearLat);
+  if (el.dataset.nearLng) params.set('lng', el.dataset.nearLng);
 
   fetch(`/api/listings.geojson?${params}`)
     .then((r) => r.json())
@@ -49,31 +51,14 @@
         );
         markers.push(marker);
       });
-      if (markers.length) {
+      // "Near me" already centred the view server-side (data-lat/data-lng, read
+      // above) — fitting bounds to every pin here would immediately zoom back out
+      // and undo that, so it only runs for the unfiltered/default view.
+      if (markers.length && el.dataset.nearMe !== 'true') {
         map.fitBounds(L.featureGroup(markers).getBounds().pad(0.2));
       }
     })
     .catch(() => {});
-
-  if (navigator.geolocation) {
-    const control = L.control({ position: 'topright' });
-    control.onAdd = function () {
-      const div = L.DomUtil.create('div', 'leaflet-bar');
-      const link = L.DomUtil.create('a', '', div);
-      link.href = '#';
-      link.title = el.dataset.locateLabel;
-      link.textContent = '◎';
-      link.style.fontSize = '20px';
-      L.DomEvent.on(link, 'click', (event) => {
-        L.DomEvent.stop(event);
-        navigator.geolocation.getCurrentPosition((position) => {
-          map.setView([position.coords.latitude, position.coords.longitude], 13);
-        });
-      });
-      return div;
-    };
-    control.addTo(map);
-  }
 
   function escapeHtml(value) {
     return String(value || '').replace(/[&<>"']/g, (c) => ({

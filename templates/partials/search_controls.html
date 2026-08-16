@@ -1,0 +1,40 @@
+{# Shared by index.html and map.html so both pages search, filter and "near me"
+   sort the exact same way instead of two hand-kept copies drifting apart.
+   Expects `search_action` ("/" or "/map") set by the including template, plus
+   the usual q / active_tags / lat / lng / near_me / categories context. #}
+<form class="searchbar" method="get" action="{{ search_action }}" role="search">
+  <input type="search" name="q" value="{{ q }}"
+         placeholder="{{ t('home.search_placeholder') }}"
+         aria-label="{{ t('home.search') }}" enterkeyhint="search">
+  {% for tag in active_tags %}<input type="hidden" name="tags" value="{{ tag }}">{% endfor %}
+  <input type="hidden" name="lat" value="{{ lat }}">
+  <input type="hidden" name="lng" value="{{ lng }}">
+  <button type="submit" aria-label="{{ t('home.search') }}">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2m0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12"/></svg>
+  </button>
+</form>
+
+<form class="chips" method="get" action="{{ search_action }}" aria-label="{{ t('listing.category') }}" data-autosubmit>
+  {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
+  <input type="hidden" name="lat" value="{{ lat }}">
+  <input type="hidden" name="lng" value="{{ lng }}">
+  {# A chip, not an icon button: same look and text-label discoverability as the
+     tag filters right next to it, rather than a one-off control someone has to
+     guess at. Needs its own click handling (geolocate, then submit) instead of
+     the plain autosubmit checkboxes the other chips use. #}
+  <button type="button" class="chip near-me-chip {% if near_me %}is-active{% endif %}"
+          data-near-me data-active="{{ 'true' if near_me else 'false' }}"
+          aria-pressed="{{ 'true' if near_me else 'false' }}">
+    <svg class="chip-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8m9 3h-2.06A7 7 0 0 0 13 5.06V3h-2v2.06A7 7 0 0 0 5.06 11H3v2h2.06A7 7 0 0 0 11 18.94V21h2v-2.06A7 7 0 0 0 18.94 13H21z"/></svg>
+    {{ t('home.near_me') }}
+  </button>
+  <a class="chip {% if not active_tags %}is-active{% endif %}"
+     href="{{ search_action }}?{% if q %}q={{ q }}&{% endif %}{% if lat %}lat={{ lat }}&lng={{ lng }}{% endif %}">{{ t('home.all') }}</a>
+  {% for cat in categories %}
+    <label class="chip">
+      <input type="checkbox" class="visually-hidden" name="tags" value="{{ cat }}"
+             {% if cat in active_tags %}checked{% endif %}>
+      {% include "partials/category_icon.html" %}{{ t('category.' ~ cat) }}
+    </label>
+  {% endfor %}
+</form>

@@ -40,3 +40,33 @@ document.querySelectorAll('form[data-confirm]').forEach((form) => {
 document.querySelectorAll('form[data-autosubmit] input').forEach((field) => {
   field.addEventListener('change', () => field.form.submit());
 });
+
+// "Near me" (search bar, shared between the home grid and the map): fills the
+// form's hidden lat/lng and resubmits — a normal page load, sorted server-side,
+// same as any other filter. Already active: clear instead of re-locating, so
+// there is always a plain way back to newest-first.
+document.querySelectorAll('[data-near-me]').forEach((btn) => {
+  const form = btn.closest('form');
+  const latField = form.querySelector('input[name="lat"]');
+  const lngField = form.querySelector('input[name="lng"]');
+
+  btn.addEventListener('click', () => {
+    if (btn.dataset.active === 'true') {
+      latField.value = '';
+      lngField.value = '';
+      form.submit();
+      return;
+    }
+    if (!navigator.geolocation) return;
+    btn.disabled = true;
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        latField.value = position.coords.latitude;
+        lngField.value = position.coords.longitude;
+        form.submit();
+      },
+      () => { btn.disabled = false; },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
+    );
+  });
+});

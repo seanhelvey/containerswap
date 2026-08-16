@@ -218,6 +218,10 @@ main { padding: var(--pad); max-width: 900px; margin: 0 auto; }
 }
 .searchbar button svg { fill: #fff; }
 
+/* The near-me chip is a <button>, unlike the other chips (an <a> or a checkbox
+   <label>) — reset that base styling so it picks up the same look regardless. */
+.near-me-chip { font: inherit; -webkit-appearance: none; appearance: none; }
+
 .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; }
 /* Same chip look inside the post/edit-listing form, but wrapping rather than
    horizontal-scrolling — it's a field in a form, not a nav bar. */

@@ -12,27 +12,8 @@
   </h1>
 </section>
 
-<form class="searchbar" method="get" action="/" role="search">
-  <input type="search" name="q" value="{{ q }}"
-         placeholder="{{ t('home.search_placeholder') }}"
-         aria-label="{{ t('home.search') }}" enterkeyhint="search">
-  <button type="submit" aria-label="{{ t('home.search') }}">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2a8 8 0 1 0 4.9 14.3l5.4 5.4 1.4-1.4-5.4-5.4A8 8 0 0 0 10 2m0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12"/></svg>
-  </button>
-</form>
-
-<form class="chips" method="get" action="/" aria-label="{{ t('listing.category') }}" data-autosubmit>
-  {% if q %}<input type="hidden" name="q" value="{{ q }}">{% endif %}
-  <a class="chip {% if not active_tags %}is-active{% endif %}"
-     href="/{% if q %}?q={{ q }}{% endif %}">{{ t('home.all') }}</a>
-  {% for cat in categories %}
-    <label class="chip">
-      <input type="checkbox" class="visually-hidden" name="tags" value="{{ cat }}"
-             {% if cat in active_tags %}checked{% endif %}>
-      {% include "partials/category_icon.html" %}{{ t('category.' ~ cat) }}
-    </label>
-  {% endfor %}
-</form>
+{% set search_action = '/' %}
+{% include "partials/search_controls.html" %}
 
 {% if listings %}
   <div class="grid">
