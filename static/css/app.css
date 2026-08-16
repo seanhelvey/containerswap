@@ -67,14 +67,19 @@ a { color: var(--green); }
   position: sticky; top: 0; z-index: 20;
 }
 .brand {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 8px; min-width: 0;
   font-weight: 700; text-decoration: none; color: var(--ink);
 }
-.brand-group { display: flex; align-items: center; gap: 10px; }
+.brand img { flex-shrink: 0; }
+/* The site name truncates before it can collide with the badge next to it —
+   a long or configured-per-deployment site_name must not be able to overlap
+   fixed-width chrome on a narrow phone. See issue #23: it used to just overflow. */
+.brand span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brand-group { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; }
 .beta-badge {
   font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
   color: var(--green); border: 1px solid var(--green); border-radius: 999px;
-  padding: 2px 8px; text-decoration: none; white-space: nowrap;
+  padding: 2px 8px; text-decoration: none; white-space: nowrap; flex-shrink: 0;
 }
 
 main { padding: var(--pad); max-width: 900px; margin: 0 auto; }
@@ -254,7 +259,7 @@ textarea { min-height: 88px; resize: vertical; }
 .link-button {
   background: none; border: none; font: inherit; color: var(--green);
   min-height: 44px; padding: 0 8px; cursor: pointer; text-decoration: none;
-  display: inline-flex; align-items: center;
+  display: inline-flex; align-items: center; flex-shrink: 0;
 }
 .inline-form { display: inline; }
 
