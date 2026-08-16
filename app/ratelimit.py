@@ -23,6 +23,8 @@ LIMITS: dict[str, tuple[int, int]] = {
     "listing": (10, 3600),
     "contact": (20, 3600),
     "report": (10, 3600),
+    "forgot_password": (5, 3600),
+    "reset_password": (10, 3600),
 }
 
 

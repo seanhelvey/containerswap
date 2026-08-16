@@ -130,6 +130,175 @@ def test_signup_flood_is_rate_limited(client):
     assert response.status_code == 429
 
 
+def test_signup_honeypot_silently_drops_the_account(client):
+    """A filled hp-field means a bot filled every input; give it a convincing no-op."""
+    response = client.post(
+        "/signup",
+        data={
+            "email": "bot@example.com",
+            "password": "correct-horse-battery",
+            "website": "http://spam.example",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"] == "/"
+    assert "cs_session" not in response.cookies
+
+    with SessionLocal() as db:
+        assert db.query(User).filter_by(email="bot@example.com").one_or_none() is None
+
+
+def test_signup_sends_a_verification_link(client, monkeypatch):
+    from app.routes import account
+
+    sent: list[tuple] = []
+    monkeypatch.setattr(account, "notify_verify_email", lambda *args: sent.append(args))
+
+    register(client, "alice")
+
+    with SessionLocal() as db:
+        user = db.query(User).filter_by(email="alice@example.com").one()
+        assert user.email_verified is False
+
+    assert len(sent) == 1
+    to, token = sent[0]
+    assert to == "alice@example.com"
+
+    response = client.get(f"/verify-email/{token}", follow_redirects=False)
+    assert response.status_code == 200
+    assert "Email verified" in response.text
+
+    with SessionLocal() as db:
+        assert db.query(User).filter_by(email="alice@example.com").one().email_verified is True
+
+
+def test_an_invalid_verification_token_verifies_nobody(client):
+    register(client, "alice")
+    response = client.get("/verify-email/not-a-real-token", follow_redirects=False)
+    assert response.status_code == 400
+
+    with SessionLocal() as db:
+        assert db.query(User).filter_by(email="alice@example.com").one().email_verified is False
+
+
+def test_forgot_password_does_not_reveal_whether_an_account_exists(client):
+    register(client, "alice")
+    known = client.post("/forgot-password", data={"email": "alice@example.com"})
+    unknown = client.post("/forgot-password", data={"email": "nobody@example.com"})
+    assert known.status_code == unknown.status_code == 200
+    assert known.text == unknown.text
+
+
+def test_password_reset_changes_the_password_and_signs_in(client, monkeypatch):
+    from app.routes import account
+
+    register(client, "alice")
+
+    sent: list[tuple] = []
+    monkeypatch.setattr(account, "notify_password_reset", lambda *args: sent.append(args))
+    client.post("/forgot-password", data={"email": "alice@example.com"})
+    assert len(sent) == 1
+    to, token = sent[0]
+    assert to == "alice@example.com"
+
+    form = client.get(f"/reset-password/{token}", follow_redirects=False)
+    assert form.status_code == 200
+
+    response = client.post(
+        f"/reset-password/{token}", data={"password": "new-correct-horse"}, follow_redirects=False
+    )
+    assert response.status_code == 303
+    assert "cs_session" in response.cookies
+
+    client.cookies.clear()
+    old_password = client.post(
+        "/login", data={"email": "alice@example.com", "password": "correct-horse-battery"}
+    )
+    assert old_password.status_code == 401
+
+    new_password = client.post(
+        "/login",
+        data={"email": "alice@example.com", "password": "new-correct-horse"},
+        follow_redirects=False,
+    )
+    assert new_password.status_code == 303
+
+    with SessionLocal() as db:
+        assert db.query(User).filter_by(email="alice@example.com").one().email_verified is True
+
+
+def test_password_reset_signs_out_other_sessions(client, monkeypatch):
+    """The scenario a reset exists for is someone else already being logged in as you."""
+    from fastapi.testclient import TestClient
+
+    from app.routes import account
+
+    register(client, "alice")
+    with TestClient(main.app) as other:
+        other.post(
+            "/login", data={"email": "alice@example.com", "password": "correct-horse-battery"}
+        )
+        assert other.get("/listings/new").status_code == 200
+
+        sent: list[tuple] = []
+        monkeypatch.setattr(account, "notify_password_reset", lambda *args: sent.append(args))
+        client.post("/forgot-password", data={"email": "alice@example.com"})
+        _, token = sent[0]
+        client.post(f"/reset-password/{token}", data={"password": "new-correct-horse"})
+
+        still_logged_in = other.get("/listings/new", follow_redirects=False)
+        assert still_logged_in.status_code == 303
+        assert still_logged_in.headers["location"] == "/login?next=/listings/new"
+
+
+def test_password_reset_token_can_only_be_used_once(client, monkeypatch):
+    from app.routes import account
+
+    register(client, "alice")
+    sent: list[tuple] = []
+    monkeypatch.setattr(account, "notify_password_reset", lambda *args: sent.append(args))
+    client.post("/forgot-password", data={"email": "alice@example.com"})
+    _, token = sent[0]
+
+    first = client.post(
+        f"/reset-password/{token}", data={"password": "new-correct-horse"}, follow_redirects=False
+    )
+    assert first.status_code == 303
+
+    replay = client.post(f"/reset-password/{token}", data={"password": "another-password"})
+    assert replay.status_code == 400
+
+
+def test_reset_password_rejects_a_short_password(client, monkeypatch):
+    from app.routes import account
+
+    register(client, "alice")
+    sent: list[tuple] = []
+    monkeypatch.setattr(account, "notify_password_reset", lambda *args: sent.append(args))
+    client.post("/forgot-password", data={"email": "alice@example.com"})
+    _, token = sent[0]
+
+    response = client.post(f"/reset-password/{token}", data={"password": "short"})
+    assert response.status_code == 400
+
+    login = client.post(
+        "/login",
+        data={"email": "alice@example.com", "password": "correct-horse-battery"},
+        follow_redirects=False,
+    )
+    assert login.status_code == 303
+
+
+def test_an_invalid_reset_token_changes_nothing(client):
+    response = client.get("/reset-password/not-a-real-token", follow_redirects=False)
+    assert response.status_code == 400
+    response = client.post(
+        "/reset-password/not-a-real-token", data={"password": "new-correct-horse"}
+    )
+    assert response.status_code == 400
+
+
 def test_email_is_case_insensitive_at_login(client):
     register(client, "alice")
     client.post("/logout", data={"csrf_token": csrf_for(client)}, follow_redirects=False)

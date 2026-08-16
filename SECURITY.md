@@ -40,24 +40,24 @@ An instance is not safe to invite users to until all of these are true:
 - [ ] `CS_DEBUG=false` — this is what makes session cookies `Secure` and hides
       tracebacks and the OpenAPI schema.
 - [ ] The site is served over HTTPS only (FastAPI Cloud does this by default).
-- [ ] `CS_DATA_DIR` is on a persistent volume that is backed up.
+- [ ] `CS_SUPABASE_SERVICE_KEY`, `CS_RESEND_API_KEY`, and the other secrets in
+      README's environment table are set and marked Secret in the FastAPI Cloud
+      dashboard.
 - [ ] Reports at `/listings/{id}/report` are actually being read by a human.
 
 ## Current known limitations
 
 Stated plainly rather than left for someone to discover:
 
-- **Rate limiting is per-process and in memory** (`app/ratelimit.py`). It blunts
-  casual abuse from a single IP; it does not survive a restart and does not
-  coordinate across replicas. FastAPI Cloud does zero-downtime deploys, which means
-  old and new instances run at once — so the real limit is already looser than the
-  numbers in `LIMITS` suggest. Needs Redis to be accurate.
-- **SQLite on local disk is wrong for this platform.** FastAPI Cloud has no
-  persistent volumes, and concurrent instances do not share a filesystem. Until this
-  moves to Postgres, treat all data as disposable and do not invite real users.
-- **There is no moderation queue.** Reports are written to a table that a maintainer
-  has to query by hand.
-- **Account recovery is not built yet.** The email column exists but nothing sends
-  mail, so a forgotten password is currently a lost account, and a seller is not yet
-  notified when a message arrives. Both are the next things to build.
+- **Signing up with an email you do not own works, until you use it.** There is no
+  block on signup, but nothing that depends on ownership works until the address is
+  proven: `/verify-email/{token}` (sent at signup) or `/reset-password/{token}`
+  (which verifies as a side effect of proving inbox control) are both required
+  first. Not a data-exposure bug — nothing private leaks — just a window where the
+  email column cannot yet be trusted.
+- **There is no way to resend a verification email.** If the first one is lost,
+  requesting a password reset has the same effect, since completing a reset also
+  marks the address verified.
+- **There is no moderation queue.** Reports are written to a table and emailed to
+  `CS_REPORT_EMAIL`, but a maintainer still has to read and act on each one by hand.
 - **Comments and messages are not filtered** for abuse beyond length caps.

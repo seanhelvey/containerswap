@@ -156,6 +156,9 @@ main { padding: var(--pad); max-width: 900px; margin: 0 auto; }
 /* --- forms --- */
 
 .form { display: flex; flex-direction: column; gap: 16px; }
+/* Off-screen, not display:none — some bots skip fields hidden that way. Humans
+   never see or reach it; a filled value means whatever submitted the form isn't one. */
+.hp-field { position: absolute; left: -9999px; top: -9999px; }
 .field { display: flex; flex-direction: column; gap: 6px; border: 0; padding: 0; margin: 0; }
 .field > span, .field > legend { font-weight: 600; font-size: 15px; }
 .field em { font-style: normal; font-weight: 400; color: var(--ink-soft); font-size: 13px; }

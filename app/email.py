@@ -108,6 +108,36 @@ def notify_new_message(recipient_email: str, sender_name: str, listing_title: st
 
 
 @_never_fails
+def notify_verify_email(to: str, token: str) -> None:
+    """Send the link that proves an address is real and reachable."""
+    _send(
+        to,
+        "Confirm your email",
+        f"Confirm your email to finish setting up your account:\n\n"
+        f"{settings.site_url}/verify-email/{token}\n\n"
+        f"If you did not sign up for {settings.site_name}, ignore this message.",
+    )
+
+
+@_never_fails
+def notify_password_reset(to: str, token: str) -> None:
+    """Send the link that lets someone set a new password.
+
+    No email-verification check gates this: successfully clicking the link is
+    itself proof the recipient controls the inbox, which is the same proof
+    verification exists to get.
+    """
+    _send(
+        to,
+        "Reset your password",
+        f"Someone (hopefully you) asked to reset your {settings.site_name} password:\n\n"
+        f"{settings.site_url}/reset-password/{token}\n\n"
+        f"This link expires in an hour and works once. If you did not request this, "
+        f"ignore it and your password will stay the same.",
+    )
+
+
+@_never_fails
 def notify_new_report(listing_id: int, listing_title: str, reason: str) -> None:
     """Tell the operator that a listing was reported.
 

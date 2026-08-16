@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -8,16 +8,22 @@ from app.auth import (
     clear_session_cookie,
     generate_display_name,
     hash_password,
+    issue_email_verification_token,
+    issue_password_reset_token,
     issue_session,
     normalize_display_name,
     normalize_email,
+    read_email_verification_token,
     require_user,
+    resolve_password_reset_token,
     set_session_cookie,
     validate_credentials,
+    validate_password,
     verify_csrf,
     verify_password,
 )
 from app.db import get_db
+from app.email import notify_password_reset, notify_verify_email
 from app.models import User
 from app.templating import render
 
@@ -34,11 +40,19 @@ def signup_form(request: Request):
 @router.post("/signup", dependencies=[Depends(ratelimit.limiter("signup"))])
 def signup(
     request: Request,
+    background_tasks: BackgroundTasks,
     email: str = Form(""),
     password: str = Form(""),
     display_name: str = Form(""),
+    website: str = Form(""),
     db: Session = Depends(get_db),
 ):
+    if website:
+        # Honeypot: a hidden field no human reaches. A scripted bot that fills
+        # every input trips it. Respond exactly like a real signup so nothing
+        # about the response tells the bot it was caught.
+        return RedirectResponse("/", status_code=303)
+
     address = normalize_email(email)
     chosen = normalize_display_name(display_name)
     error = validate_credentials(address, password, chosen)
@@ -64,7 +78,13 @@ def signup(
     db.add(user)
     db.commit()
 
-    cookie, _ = issue_session(user.id)
+    # Unverified accounts can use the site immediately. Nothing currently depends
+    # on email_verified — password reset proves ownership on its own, the same way.
+    background_tasks.add_task(
+        notify_verify_email, user.email, issue_email_verification_token(user.id)
+    )
+
+    cookie, _ = issue_session(user)
     response = RedirectResponse("/", status_code=303)
     set_session_cookie(response, cookie)
     return response
@@ -97,8 +117,80 @@ def login(
             status_code=401,
         )
 
-    cookie, _ = issue_session(user.id)
+    cookie, _ = issue_session(user)
     response = RedirectResponse(_safe_next(next), status_code=303)
+    set_session_cookie(response, cookie)
+    return response
+
+
+@router.get("/verify-email/{token}")
+def verify_email(request: Request, token: str, db: Session = Depends(get_db)):
+    uid = read_email_verification_token(token)
+    user = db.get(User, uid) if uid is not None else None
+    if user is None:
+        return render(request, "verify_email.html", {"success": False}, status_code=400)
+
+    user.email_verified = True
+    db.commit()
+    return render(request, "verify_email.html", {"success": True})
+
+
+@router.get("/forgot-password")
+def forgot_password_form(request: Request):
+    return render(request, "forgot_password.html")
+
+
+@router.post("/forgot-password", dependencies=[Depends(ratelimit.limiter("forgot_password"))])
+def forgot_password(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    email: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    address = normalize_email(email)
+    user = db.execute(select(User).where(User.email == address)).scalar_one_or_none()
+    if user and user.is_active:
+        background_tasks.add_task(
+            notify_password_reset, user.email, issue_password_reset_token(user)
+        )
+    # Same response either way: never reveal whether an account exists.
+    return render(request, "forgot_password.html", {"sent": True})
+
+
+@router.get("/reset-password/{token}")
+def reset_password_form(request: Request, token: str, db: Session = Depends(get_db)):
+    user = resolve_password_reset_token(token, db)
+    if user is None:
+        return render(request, "reset_password.html", {"valid": False}, status_code=400)
+    return render(request, "reset_password.html", {"valid": True, "token": token})
+
+
+@router.post("/reset-password/{token}", dependencies=[Depends(ratelimit.limiter("reset_password"))])
+def reset_password(
+    request: Request, token: str, password: str = Form(""), db: Session = Depends(get_db)
+):
+    user = resolve_password_reset_token(token, db)
+    if user is None:
+        return render(request, "reset_password.html", {"valid": False}, status_code=400)
+
+    error = validate_password(password)
+    if error:
+        return render(
+            request,
+            "reset_password.html",
+            {"valid": True, "token": token, "error_key": error},
+            status_code=400,
+        )
+
+    user.password_hash = hash_password(password)
+    user.session_version += 1
+    # Clicking a link only the account's inbox could have received is itself proof
+    # of ownership — the same proof email verification exists to get.
+    user.email_verified = True
+    db.commit()
+
+    cookie, _ = issue_session(user)
+    response = RedirectResponse("/", status_code=303)
     set_session_cookie(response, cookie)
     return response
 

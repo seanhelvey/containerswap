@@ -28,6 +28,10 @@ class User(Base):
     display_name: Mapped[str] = mapped_column(String(32), index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(default=True, server_default=text("true"))
+    email_verified: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
+    # Bumped on password reset. A session's own copy of this must match, or it is
+    # treated as signed out — see app.auth.issue_session / get_current_user.
+    session_version: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     listings: Mapped[list["Listing"]] = relationship(back_populates="owner")

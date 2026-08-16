@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ t('auth.verify_success_title') if success else t('auth.verify_invalid_title') }} · {{ settings.site_name }}{% endblock %}
+
+{% block content %}
+{% if success %}
+<h1 class="page-title">{{ t('auth.verify_success_title') }}</h1>
+<p>{{ t('auth.verify_success_body') }}</p>
+{% else %}
+<h1 class="page-title">{{ t('auth.verify_invalid_title') }}</h1>
+<p>{{ t('auth.verify_invalid_body') }}</p>
+{% endif %}
+<p class="hint center"><a href="/">{{ t('error.back_home') }}</a></p>
+{% endblock %}

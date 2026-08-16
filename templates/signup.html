@@ -7,6 +7,10 @@
 {% if error_key %}<p class="alert alert-error">{{ t(error_key) }}</p>{% endif %}
 
 <form class="form" method="post" action="/signup">
+  <div class="hp-field" aria-hidden="true">
+    <label for="website">{{ t('auth.hp_label') }}</label>
+    <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
+  </div>
   <label class="field">
     <span>{{ t('auth.email') }}</span>
     <input type="email" name="email" value="{{ email|default('') }}" required maxlength="255"
