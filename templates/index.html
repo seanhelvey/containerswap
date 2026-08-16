@@ -47,63 +47,68 @@
   </div>
 {% endif %}
 
-<section class="how-it-works-section">
-  <h2>{{ t('home.how_it_works_title') }}</h2>
-  <ol class="how-it-works">
-    <li><span class="how-step" aria-hidden="true">1</span><span>{{ t('home.how_1') }}</span></li>
-    <li><span class="how-step" aria-hidden="true">2</span><span>{{ t('home.how_2') }}</span></li>
-    <li><span class="how-step" aria-hidden="true">3</span><span>{{ t('home.how_3') }}</span></li>
-  </ol>
-  <p class="hint how-it-works-note">{{ t('home.how_no_shipping') }}</p>
-</section>
+{% if not q and not active_tags %}
+  {# Landing state only. The moment someone has searched or filtered they're
+     doing a task, not learning what the site is — a page of explainer sections
+     between them and their results would be noise, not context. #}
+  <section class="how-it-works-section">
+    <h2>{{ t('home.how_it_works_title') }}</h2>
+    <ol class="how-it-works">
+      <li><span class="how-step" aria-hidden="true">1</span><span>{{ t('home.how_1') }}</span></li>
+      <li><span class="how-step" aria-hidden="true">2</span><span>{{ t('home.how_2') }}</span></li>
+      <li><span class="how-step" aria-hidden="true">3</span><span>{{ t('home.how_3') }}</span></li>
+    </ol>
+    <p class="hint how-it-works-note">{{ t('home.how_no_shipping') }}</p>
+  </section>
 
-<section class="story-section story-section--media">
-  <div class="story-media">
-    <img src="{{ static_url('images/story/why-reuse.jpg') }}" alt="{{ t('home.why_image_alt') }}"
-         width="1000" height="666" loading="lazy">
-  </div>
-  <div class="story-copy">
-    <h2>{{ t('home.why_title') }}</h2>
-    <p>{{ t('home.why_pp') }}</p>
-    <p>{{ t('home.why_carbon') }}</p>
-    <p>{{ t('home.why_upcycling') }}</p>
-  </div>
-</section>
+  <section class="story-section story-section--media">
+    <div class="story-media">
+      <img src="{{ static_url('images/story/why-reuse.jpg') }}" alt="{{ t('home.why_image_alt') }}"
+           width="1000" height="666" loading="lazy">
+    </div>
+    <div class="story-copy">
+      <h2>{{ t('home.why_title') }}</h2>
+      <p>{{ t('home.why_pp') }}</p>
+      <p>{{ t('home.why_carbon') }}</p>
+      <p>{{ t('home.why_upcycling') }}</p>
+    </div>
+  </section>
 
-<section class="story-section story-section--media story-section--reverse">
-  <div class="story-media">
-    <img src="{{ static_url('images/story/origin.jpg') }}" alt="{{ t('home.origin_image_alt') }}"
-         width="900" height="675" loading="lazy">
-  </div>
-  <div class="story-copy">
-    <h2>{{ t('home.origin_title') }}</h2>
-    <p>{{ t('home.origin_body') }}</p>
-    <p>{{ t('home.origin_body_2') }}</p>
-  </div>
-</section>
+  <section class="story-section story-section--media story-section--reverse">
+    <div class="story-media">
+      <img src="{{ static_url('images/story/origin.jpg') }}" alt="{{ t('home.origin_image_alt') }}"
+           width="900" height="675" loading="lazy">
+    </div>
+    <div class="story-copy">
+      <h2>{{ t('home.origin_title') }}</h2>
+      <p>{{ t('home.origin_body') }}</p>
+      <p>{{ t('home.origin_body_2') }}</p>
+    </div>
+  </section>
 
-<section class="story-section">
-  <h2>{{ t('home.privacy_title') }}</h2>
-  <p>{{ t('home.privacy_pins') }}</p>
-  <p>{{ t('home.privacy_email') }}</p>
-  <p>{{ t('home.privacy_photos') }}</p>
-</section>
+  <section class="story-section">
+    <h2>{{ t('home.privacy_title') }}</h2>
+    <p>{{ t('home.privacy_pins') }}</p>
+    <p>{{ t('home.privacy_email') }}</p>
+    <p>{{ t('home.privacy_photos') }}</p>
+  </section>
 
-<section class="hero-story">
-  <p class="hero-intro">{{ t('home.beta_intro') }}</p>
-  <p class="hint origin-note">{{ t('home.origin_note') }}</p>
-  <a class="button button-secondary" href="/feedback">{{ t('feedback.cta') }}</a>
-</section>
+  <section class="hero-story">
+    <p class="hero-intro">{{ t('home.beta_intro') }}</p>
+    <p class="hint origin-note">{{ t('home.origin_note') }}</p>
+    <a class="button button-secondary" href="/feedback">{{ t('feedback.cta') }}</a>
+  </section>
 
-<section class="story-section story-section--media story-section--reverse">
-  <div class="story-media">
-    <img src="{{ static_url('images/story/for-organizations.jpg') }}" alt="{{ t('home.partners_image_alt') }}"
-         width="720" height="1130" loading="lazy">
-  </div>
-  <div class="story-copy">
-    <h2>{{ t('home.partners_title') }}</h2>
-    <p>{{ t('home.partners_body') }}</p>
-    <a class="button button-secondary" href="/feedback">{{ t('home.partners_cta') }}</a>
-  </div>
-</section>
+  <section class="story-section story-section--media story-section--reverse">
+    <div class="story-media">
+      <img src="{{ static_url('images/story/for-organizations.jpg') }}" alt="{{ t('home.partners_image_alt') }}"
+           width="720" height="1130" loading="lazy">
+    </div>
+    <div class="story-copy">
+      <h2>{{ t('home.partners_title') }}</h2>
+      <p>{{ t('home.partners_body') }}</p>
+      <a class="button button-secondary" href="/feedback">{{ t('home.partners_cta') }}</a>
+    </div>
+  </section>
+{% endif %}
 {% endblock %}

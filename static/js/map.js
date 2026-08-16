@@ -15,7 +15,11 @@
     attribution: '&copy; OpenStreetMap contributors',
   }).addTo(map);
 
-  fetch('/api/listings.geojson')
+  const params = new URLSearchParams();
+  if (el.dataset.q) params.set('q', el.dataset.q);
+  el.dataset.tags.split(',').filter(Boolean).forEach((tag) => params.append('tags', tag));
+
+  fetch(`/api/listings.geojson?${params}`)
     .then((r) => r.json())
     .then((data) => {
       const markers = [];

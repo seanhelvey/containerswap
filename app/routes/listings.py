@@ -31,6 +31,24 @@ router = APIRouter()
 PAGE_SIZE = 24
 
 
+def _search_filter(query, q: str, tags: list[str]):
+    """Shared by the home grid and the map: same keyword/tag rules either way, so
+    the two views never quietly disagree about what a search matches."""
+    term = q.strip()
+    if term:
+        like = f"%{term}%"
+        query = query.where(Listing.title.ilike(like) | Listing.body.ilike(like))
+
+    # OR across whatever's selected: a listing matching any chosen tag qualifies,
+    # not just one matching all of them.
+    active_tags = [t for t in tags if t in TAGS]
+    if active_tags:
+        query = query.where(
+            Listing.id.in_(select(ListingTag.listing_id).where(ListingTag.tag.in_(active_tags)))
+        )
+    return query, term, active_tags
+
+
 @router.get("/")
 def home(
     request: Request,
@@ -44,18 +62,7 @@ def home(
         .where(Listing.status == "active")
         .order_by(Listing.created_at.desc())
     )
-    term = q.strip()
-    if term:
-        like = f"%{term}%"
-        query = query.where(Listing.title.ilike(like) | Listing.body.ilike(like))
-
-    # OR across whatever's selected: a listing matching any chosen tag qualifies,
-    # not just one matching all of them.
-    active_tags = [t for t in tags if t in TAGS]
-    if active_tags:
-        query = query.where(
-            Listing.id.in_(select(ListingTag.listing_id).where(ListingTag.tag.in_(active_tags)))
-        )
+    query, term, active_tags = _search_filter(query, q, tags)
 
     listings = db.execute(query.limit(PAGE_SIZE)).scalars().all()
     return render(
@@ -66,24 +73,24 @@ def home(
 
 
 @router.get("/map")
-def map_view(request: Request):
-    return render(request, "map.html")
+def map_view(request: Request, q: str = "", tags: list[str] = Query([])):
+    _, term, active_tags = _search_filter(select(Listing), q, tags)
+    return render(request, "map.html", {"q": term, "active_tags": active_tags})
 
 
 @router.get("/api/listings.geojson")
-def listings_geojson(db: Session = Depends(get_db)):
-    """Map pins. Coordinates here are already fuzzed — see app.geo."""
-    rows = (
-        db.execute(
-            select(Listing)
-            .options(selectinload(Listing.tags))
-            .where(Listing.status == "active", Listing.lat.is_not(None))
-            .order_by(Listing.created_at.desc())
-            .limit(500)
-        )
-        .scalars()
-        .all()
+def listings_geojson(q: str = "", tags: list[str] = Query([]), db: Session = Depends(get_db)):
+    """Map pins. Coordinates here are already fuzzed — see app.geo. Takes the same
+    `q`/`tags` params as `/` so the map can be filtered instead of always showing
+    every active listing."""
+    query = (
+        select(Listing)
+        .options(selectinload(Listing.tags))
+        .where(Listing.status == "active", Listing.lat.is_not(None))
+        .order_by(Listing.created_at.desc())
     )
+    query, _, _ = _search_filter(query, q, tags)
+    rows = db.execute(query.limit(500)).scalars().all()
 
     return JSONResponse(
         {
