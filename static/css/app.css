@@ -98,9 +98,13 @@ main { padding: var(--pad); max-width: 900px; margin: 0 auto; }
 .tab.is-active { color: var(--green); font-weight: 600; }
 .tab-primary svg { fill: var(--green); }
 
-/* Below 640px the tab bar is a mobile app convention: pinned to the bottom
-   edge, thumb reach. Above it, nobody looks there — desktop nav lives near
-   the header, so reorder it next to .topbar instead of moving any markup. */
+/* Below 640px the tab bar is a mobile app convention: icon-over-label tiles
+   pinned to the bottom edge for thumb reach (Material/Apple HIG). That
+   convention doesn't carry to desktop — real desktop nav is text-primary,
+   horizontal, near the header, not stacked tiles relocated next to it. So
+   above 640px this drops icons entirely rather than trying to keep them
+   legible at a smaller size: plain text links are unambiguous regardless of
+   icon rendering, and match how desktop nav conventionally looks. */
 @media (min-width: 640px) {
   body { padding-bottom: 0; display: flex; flex-direction: column; }
   .topbar { order: 0; }
@@ -110,11 +114,13 @@ main { padding: var(--pad); max-width: 900px; margin: 0 auto; }
   .tabbar {
     order: 1;
     position: static;
-    display: flex; justify-content: center; gap: 8px;
+    display: flex; justify-content: center; gap: 4px;
     border-top: none; border-bottom: 1px solid var(--line);
     padding-bottom: 0;
   }
-  .tab { flex-direction: row; gap: 6px; padding: 10px 16px; }
+  .tab { flex-direction: row; padding: 14px 20px; font-size: 15px; }
+  .tab svg { display: none; }
+  .tab-primary { color: var(--green); font-weight: 700; }
 }
 
 /* --- type --- */
