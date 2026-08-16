@@ -6,9 +6,9 @@
 
 {% block content %}
 <div id="map" class="map"
-     data-lat="{{ settings.default_lat }}"
-     data-lng="{{ settings.default_lng }}"
-     data-zoom="{{ settings.default_zoom }}"
+     data-lat="{{ region.lat if region else settings.default_lat }}"
+     data-lng="{{ region.lng if region else settings.default_lng }}"
+     data-zoom="{{ region.zoom if region else settings.default_zoom }}"
      data-locate-label="{{ t('map.locate') }}"
      data-demo-label="{{ t('listing.seed_badge') }}">
   <p class="map-loading">{{ t('map.loading') }}</p>

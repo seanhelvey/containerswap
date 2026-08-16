@@ -46,9 +46,14 @@ valid. A structured currency field would quietly exclude barter and most of the 
 `locales/en.json`. Adding a language is one JSON file — no template changes. Dates
 render in the visitor's own locale and timezone, client-side, from ISO-8601.
 
-**Local and global are the same code.** `CS_HOME_REGION` adds regional framing to the
-tagline ("in Humboldt County and beyond"); leaving it empty gives the global framing.
-One deployment can be grassroots without the codebase being parochial.
+**One deployment, framed locally for everyone.** Cloudflare's `CF-IPCountry` header
+gives the tagline and the map's default view a per-visitor country ("in Kenya and
+beyond"), with no config and no per-region deployment — see `app/region.py`. It's
+read-only and request-scoped, matching the "no IP address persisted" promise above. A
+country outside that table, or a request with no Cloudflare in front (local dev),
+falls back to the plain global tagline and the Humboldt County default in
+`CS_DEFAULT_LAT`/`CS_DEFAULT_LNG` — a nod to where this started, not the primary
+framing anyone sees.
 
 ---
 
@@ -132,7 +137,6 @@ marked Secret **at creation** — the toggle disappears afterwards:
 | `CS_EMAIL_FROM` | an address on a domain verified with Resend |
 | `CS_REPORT_EMAIL` | where abuse reports *and* beta feedback (`/feedback`) go |
 | `CS_SITE_URL` | `https://…` — used for links in emails |
-| `CS_HOME_REGION` | e.g. `Humboldt County`, or leave empty |
 
 `CS_STORAGE_BUCKET` defaults to `listing-photos`; the bucket must be public, since
 listing photos are served to signed-out visitors and signed URLs would defeat caching

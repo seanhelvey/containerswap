@@ -53,6 +53,7 @@ def render(request: Request, template: str, context: dict | None = None, **kwarg
         # production.
         "image_url": storage.url_for,
         "static_url": static_url,
+        "region": getattr(request.state, "region", None),
         "current_user": getattr(request.state, "user", None),
         "csrf_token": (session or {}).get("csrf", ""),
     }

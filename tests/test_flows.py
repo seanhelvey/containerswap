@@ -23,6 +23,28 @@ def test_home_renders_for_anonymous_visitors(client):
     assert settings.site_name in response.text
 
 
+def test_tagline_and_map_default_are_global_with_no_cloudflare_country_header(client):
+    """No CF-IPCountry (local dev, or Cloudflare's own "unknown" placeholders) falls
+    back to the plain global tagline and the Humboldt origin point on the map."""
+    home = client.get("/").text
+    assert "and beyond" not in home
+
+    for unknown in (None, "XX", "T1", "ZZ"):
+        headers = {"CF-IPCountry": unknown} if unknown else {}
+        map_page = client.get("/map", headers=headers).text
+        assert f'data-lat="{settings.default_lat}"' in map_page
+        assert f'data-lng="{settings.default_lng}"' in map_page
+
+
+def test_tagline_and_map_default_follow_the_visitors_cloudflare_country(client):
+    home = client.get("/", headers={"CF-IPCountry": "KE"}).text
+    assert "in Kenya and beyond" in home
+
+    map_page = client.get("/map", headers={"CF-IPCountry": "ke"}).text
+    assert 'data-lat="-1.2921"' in map_page
+    assert 'data-lng="36.8219"' in map_page
+
+
 def test_full_listing_lifecycle_logs_every_analytics_event(client):
     register(client, "alice")
     token = csrf_for(client)

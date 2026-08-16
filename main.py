@@ -12,6 +12,7 @@ from app import storage
 from app.auth import get_current_user
 from app.config import BASE_DIR, settings
 from app.db import SessionLocal, get_db
+from app.region import region_for
 from app.routes import account, listings
 from app.templating import render, set_request_language
 
@@ -92,9 +93,11 @@ app = FastAPI(
 
 @app.middleware("http")
 async def request_context(request: Request, call_next):
-    """Attach the negotiated language and the session user to every request, and set
-    the security headers on every response."""
+    """Attach the negotiated language, detected region and session user to every
+    request, and set the security headers on every response."""
     set_request_language(request)
+    # Read-only, request-scoped, never stored: see app/region.py.
+    request.state.region = region_for(request.headers.get("CF-IPCountry"))
 
     db = SessionLocal()
     try:

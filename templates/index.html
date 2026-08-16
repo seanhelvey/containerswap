@@ -4,8 +4,8 @@
 {% block content %}
 <section class="hero">
   <h1>
-    {%- if settings.home_region -%}
-      {{ t('app.tagline_local', region=settings.home_region) }}
+    {%- if region -%}
+      {{ t('app.tagline_local', region=region.name) }}
     {%- else -%}
       {{ t('app.tagline') }}
     {%- endif -%}
@@ -55,6 +55,7 @@
 
 <section class="hero-story">
   <p class="hero-intro">{{ t('home.beta_intro') }}</p>
+  <p class="hint origin-note">{{ t('home.origin_note') }}</p>
   <a class="button button-secondary" href="/feedback">{{ t('feedback.cta') }}</a>
 </section>
 {% endblock %}

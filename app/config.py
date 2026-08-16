@@ -91,10 +91,10 @@ class Settings(BaseSettings):
             value = f"https://{value}"
         return value
 
-    # Local flavour without forking the code. Empty string == global framing.
-    home_region: str = ""
-
-    # Map default view when the visitor has not granted geolocation.
+    # Map default view for a visitor with no geolocation and no detected region (see
+    # app/region.py) — local dev, or a country outside its table. This is also where
+    # the app started, so the fallback doubles as the origin nod rather than needing
+    # a separate mechanism.
     default_lat: float = 40.8021
     default_lng: float = -124.1637
     default_zoom: int = 9
