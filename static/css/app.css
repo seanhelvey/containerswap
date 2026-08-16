@@ -120,7 +120,10 @@ main { padding: var(--pad); max-width: 900px; margin: 0 auto; }
   }
   .tab { flex-direction: row; padding: 14px 20px; font-size: 15px; }
   .tab svg { display: none; }
-  .tab-primary { color: var(--green); font-weight: 700; }
+  /* No separate "primary" emphasis here: on a plain text nav, that collided
+     visually with .is-active (both rendered bold green), so "you are here"
+     and "this is the main action" became indistinguishable. Conventional
+     desktop nav just highlights the current page — nothing else. */
 }
 
 /* --- type --- */
