@@ -9,3 +9,8 @@ attribution; it's here anyway.
 - **for-organizations.jpg** — cropped from ["Little Free Pantry in front of Capitol Hill
   Presbyterian Church"](https://commons.wikimedia.org/w/index.php?curid=146546471) by
   Ser Amantio di Nicolao, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/deed.en/).
+- **origin.jpg** — not stock. The site owner's own photo of the actual containers
+  behind the origin story: empty Kirkland nut-butter jars, a feta tub and a yogurt
+  cup, washed and set on a windowsill. Kept as-is, branding included — a truthful
+  photo of containers the owner actually bought and emptied, not a stock image
+  standing in for the idea.
