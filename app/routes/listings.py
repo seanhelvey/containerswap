@@ -12,12 +12,13 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app import email, events, ratelimit, storage
 from app.auth import get_current_user, require_user, verify_csrf
+from app.config import settings
 from app.db import get_db
 from app.geo import fuzz, parse_latlng
 from app.images import ImageRejected, process_upload
@@ -152,6 +153,34 @@ def listings_geojson(
             ],
         },
         headers={"Cache-Control": "public, max-age=60"},
+    )
+
+
+@router.get("/sitemap.xml", include_in_schema=False)
+def sitemap(db: Session = Depends(get_db)):
+    """Active listings plus the static pages worth indexing. Demo/removed listings
+    are excluded — a planted listing or a 404 has nothing to rank for."""
+    base = settings.site_url
+    static_paths = ["/", "/map", "/partners"]
+    rows = db.execute(
+        select(Listing.id, Listing.created_at)
+        .where(Listing.status.in_(["active", "completed"]), Listing.is_seed.is_(False))
+        .order_by(Listing.created_at.desc())
+        .limit(5000)
+    ).all()
+
+    urls = "".join(f"<url><loc>{base}{path}</loc></url>" for path in static_paths)
+    urls += "".join(
+        f"<url><loc>{base}/listings/{row.id}</loc>"
+        f"<lastmod>{row.created_at.date().isoformat()}</lastmod></url>"
+        for row in rows
+    )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + urls + "</urlset>"
+    )
+    return Response(
+        xml, media_type="application/xml", headers={"Cache-Control": "public, max-age=3600"}
     )
 
 

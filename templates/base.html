@@ -5,10 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1b5e3f">
   <title>{% block title %}{{ settings.site_name }}{% endblock %}</title>
-  <meta name="description" content="{{ t('app.tagline') }}">
+  <meta name="description" content="{% block meta_description %}{{ t('app.tagline') }}{% endblock %}">
+  <link rel="canonical" href="{{ settings.site_url }}{{ request.url.path }}">
   <link rel="icon" href="{{ static_url('icons/icon.svg') }}" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
   <link rel="stylesheet" href="{{ static_url('css/app.css') }}">
+  {% block og %}{% endblock %}
   {% block head %}{% endblock %}
 </head>
 <body>

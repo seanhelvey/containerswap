@@ -1,6 +1,24 @@
 {% extends "base.html" %}
 {% set active_tab = 'home' %}
 
+{% block og %}
+  {% if listings %}
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "itemListElement": [
+          {%- for listing in listings %}
+          {"@type": "ListItem", "position": {{ loop.index }},
+           "url": {{ (settings.site_url ~ "/listings/" ~ listing.id) | tojson }}}
+          {%- if not loop.last %},{% endif %}
+          {%- endfor %}
+        ]
+      }
+    </script>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
 <section class="hero">
   <h1>

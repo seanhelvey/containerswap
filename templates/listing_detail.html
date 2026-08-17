@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ listing.title }} · {{ settings.site_name }}{% endblock %}
+{% block meta_description %}{{ listing.body[:160] if listing.body else t('app.tagline') }}{% endblock %}
 
 {% block content %}
 <article class="detail">
@@ -108,6 +109,33 @@
     </form>
   </details>
 {% endif %}
+{% endblock %}
+
+{% block og %}
+  {% set description = listing.body[:160] if listing.body else t('app.tagline') %}
+  {% set canonical_url = settings.site_url ~ "/listings/" ~ listing.id %}
+  <meta property="og:type" content="product">
+  <meta property="og:title" content="{{ listing.title }}">
+  <meta property="og:description" content="{{ description }}">
+  <meta property="og:url" content="{{ canonical_url }}">
+  {% if listing.image_path %}<meta property="og:image" content="{{ image_url(listing.image_path) }}">{% endif %}
+  <meta name="twitter:card" content="{{ 'summary_large_image' if listing.image_path else 'summary' }}">
+  <meta name="twitter:title" content="{{ listing.title }}">
+  <meta name="twitter:description" content="{{ description }}">
+  {% if listing.image_path %}<meta name="twitter:image" content="{{ image_url(listing.image_path) }}">{% endif %}
+  {# No `offers` field: price is deliberately free text ("$5", "500 KSh", "trade
+     for basil starts"), not a currency amount, so a schema.org Offer would have
+     to fabricate a currency that isn't there. #}
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      "name": {{ listing.title | tojson }},
+      "description": {{ description | tojson }},
+      "url": {{ canonical_url | tojson }}
+      {%- if listing.image_path %}, "image": {{ image_url(listing.image_path) | tojson }}{% endif %}
+    }
+  </script>
 {% endblock %}
 
 {% block head %}

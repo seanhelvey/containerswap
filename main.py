@@ -168,7 +168,21 @@ if not settings.uses_object_storage:
 
 @app.get("/robots.txt", include_in_schema=False)
 def robots():
-    return Response("User-agent: *\nAllow: /\nDisallow: /inbox\n", media_type="text/plain")
+    # /verify-email/ and /reset-password/ carry single-use secret tokens in the
+    # path — those must never be crawled or cached, not just kept out of the index.
+    disallow = [
+        "/inbox",
+        "/account",
+        "/listings/new",
+        "/login",
+        "/signup",
+        "/forgot-password",
+        "/reset-password/",
+        "/verify-email/",
+    ]
+    lines = ["User-agent: *", "Allow: /", *(f"Disallow: {path}" for path in disallow)]
+    lines += ["", f"Sitemap: {settings.site_url}/sitemap.xml"]
+    return Response("\n".join(lines) + "\n", media_type="text/plain")
 
 
 @app.get("/healthz", include_in_schema=False)
