@@ -115,6 +115,17 @@ def validate_password(password: str) -> str | None:
     return None
 
 
+def validate_display_name(display_name: str) -> str | None:
+    """Returns an i18n error key, or None when the name is acceptable. Shared by
+    signup (optional there) and account editing (required there)."""
+    if not (NAME_MIN <= len(display_name) <= NAME_MAX):
+        return "auth.error.name_length"
+    if "@" in display_name:
+        # Stops someone making their public label look like somebody's address.
+        return "auth.error.name_chars"
+    return None
+
+
 def validate_credentials(email: str, password: str, display_name: str = "") -> str | None:
     """Returns an i18n error key, or None when the credentials are acceptable."""
     if not email or len(email) > 255 or not _EMAIL_RE.match(email):
@@ -123,11 +134,7 @@ def validate_credentials(email: str, password: str, display_name: str = "") -> s
     if error:
         return error
     if display_name:
-        if not (NAME_MIN <= len(display_name) <= NAME_MAX):
-            return "auth.error.name_length"
-        if "@" in display_name:
-            # Stops someone making their public label look like somebody's address.
-            return "auth.error.name_chars"
+        return validate_display_name(display_name)
     return None
 
 

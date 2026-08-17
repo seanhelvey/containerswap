@@ -18,6 +18,7 @@ from app.auth import (
     resolve_password_reset_token,
     set_session_cookie,
     validate_credentials,
+    validate_display_name,
     validate_password,
     verify_csrf,
     verify_password,
@@ -33,6 +34,23 @@ router = APIRouter()
 @router.get("/account")
 def account_page(request: Request, user: User = Depends(require_user)):
     return render(request, "account.html")
+
+
+@router.post("/account", dependencies=[Depends(verify_csrf)])
+def update_account(
+    request: Request,
+    display_name: str = Form(""),
+    user: User = Depends(require_user),
+    db: Session = Depends(get_db),
+):
+    chosen = normalize_display_name(display_name)
+    error = validate_display_name(chosen)
+    if error:
+        return render(request, "account.html", {"error_key": error}, status_code=400)
+
+    user.display_name = chosen
+    db.commit()
+    return RedirectResponse("/account?saved=1", status_code=303)
 
 
 @router.get("/signup")

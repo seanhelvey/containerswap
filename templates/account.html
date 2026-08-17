@@ -5,7 +5,19 @@
 <h1 class="page-title">{{ t('account.title') }}</h1>
 
 <section class="panel">
-  <p><strong>{{ current_user.display_name }}</strong></p>
+  {% if error_key %}<p class="alert alert-error">{{ t(error_key) }}</p>{% endif %}
+  {% if request.query_params.get('saved') %}<p class="alert alert-ok">{{ t('account.saved') }}</p>{% endif %}
+
+  <form method="post" action="/account">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="field">
+      <span>{{ t('account.display_name') }}</span>
+      <input type="text" name="display_name" value="{{ current_user.display_name }}"
+             minlength="2" maxlength="32" required autocomplete="nickname">
+    </label>
+    <button class="button button-primary button-block" type="submit">{{ t('account.save') }}</button>
+  </form>
+
   <p class="hint">
     {% if current_user.email_verified %}
       {{ t('account.email_verified') }}
