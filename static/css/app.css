@@ -290,6 +290,9 @@ main { padding: var(--pad); max-width: 900px; margin: 0 auto; }
 .field-row { display: flex; gap: 12px; }
 .field-row > * { flex: 1; }
 
+.checkbox-field { display: flex; align-items: center; gap: 10px; min-height: var(--tap); font-size: 15px; }
+.checkbox-field input { width: 18px; height: 18px; flex-shrink: 0; }
+
 input[type=text], input[type=search], input[type=password], select, textarea {
   width: 100%; min-height: var(--tap); padding: 12px 14px;
   font: inherit; font-size: 16px; /* 16px stops iOS zooming on focus */

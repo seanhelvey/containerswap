@@ -140,6 +140,7 @@
   "auth.email": "Email",
   "auth.email_hint": "How you log in, and how we tell you someone messaged you. Never shown to anyone.",
   "auth.privacy_note": "Your email is never displayed on the site. People contact you through a form, so nobody sees your address.",
+  "auth.steward_interest": "Interested in helping build this locally?",
   "auth.password_hint": "At least 10 characters.",
   "auth.error.email_invalid": "That does not look like an email address.",
   "auth.error.name_length": "Display name must be 2–32 characters.",

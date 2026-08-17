@@ -32,6 +32,10 @@ class User(Base):
     # Bumped on password reset. A session's own copy of this must match, or it is
     # treated as signed out — see app.auth.issue_session / get_current_user.
     session_version: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    # A signal, not a role: opted in at signup to "interested in helping build this
+    # locally?" Grants nothing — no admin/moderator concept exists yet — read by a
+    # human the same way reports and feedback are.
+    steward_interest: Mapped[bool] = mapped_column(default=False, server_default=text("false"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     listings: Mapped[list["Listing"]] = relationship(back_populates="owner")

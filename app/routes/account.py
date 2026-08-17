@@ -50,6 +50,7 @@ def signup(
     password: str = Form(""),
     display_name: str = Form(""),
     website: str = Form(""),
+    steward_interest: str = Form(""),
     db: Session = Depends(get_db),
 ):
     if website:
@@ -79,7 +80,12 @@ def signup(
         taken = set(db.execute(select(User.display_name)).scalars().all())
         chosen = generate_display_name(taken)
 
-    user = User(email=address, display_name=chosen, password_hash=hash_password(password))
+    user = User(
+        email=address,
+        display_name=chosen,
+        password_hash=hash_password(password),
+        steward_interest=bool(steward_interest),
+    )
     db.add(user)
     db.commit()
 
