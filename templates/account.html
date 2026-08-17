@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ t('account.title') }} · {{ settings.site_name }}{% endblock %}
+
+{% block content %}
+<h1 class="page-title">{{ t('account.title') }}</h1>
+
+<section class="panel">
+  <p><strong>{{ current_user.display_name }}</strong></p>
+  <p class="hint">
+    {% if current_user.email_verified %}
+      {{ t('account.email_verified') }}
+    {% else %}
+      {{ t('account.email_unverified') }}
+      <form method="post" action="/resend-verification" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="next" value="/account">
+        <button class="link-button" type="submit">{{ t('auth.resend_verification') }}</button>
+      </form>
+      {% if request.query_params.get('resent') %}<small>{{ t('auth.verify_resent') }}</small>{% endif %}
+    {% endif %}
+  </p>
+</section>
+
+<a class="button button-secondary button-block" href="/inbox">{{ t('account.view_inbox') }}</a>
+
+<form method="post" action="/logout" class="inline-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button class="button button-secondary button-block" type="submit">{{ t('nav.logout') }}</button>
+</form>
+{% endblock %}

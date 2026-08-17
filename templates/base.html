@@ -23,10 +23,7 @@
     <span class="beta-badge">{{ t('app.beta_badge') }}</span>
   </div>
   {% if current_user %}
-    <form method="post" action="/logout" class="inline-form">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <button class="link-button" type="submit">{{ t('nav.logout') }}</button>
-    </form>
+    <a class="link-button" href="/account">{{ current_user.display_name }}</a>
   {% else %}
     <a class="link-button" href="/login">{{ t('nav.login') }}</a>
   {% endif %}

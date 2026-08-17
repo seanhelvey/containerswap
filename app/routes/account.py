@@ -30,6 +30,11 @@ from app.templating import render
 router = APIRouter()
 
 
+@router.get("/account")
+def account_page(request: Request, user: User = Depends(require_user)):
+    return render(request, "account.html")
+
+
 @router.get("/signup")
 def signup_form(request: Request):
     if getattr(request.state, "user", None):

@@ -44,7 +44,7 @@ def test_an_email_is_stored_but_never_rendered_on_any_page(client):
         assert stored.email == SECRET_EMAIL, "we do keep the address"
 
     # Signed in as the poster, and as a stranger, and unauthenticated.
-    pages = ["/", "/listings/1", "/inbox", "/map", "/api/listings.geojson"]
+    pages = ["/", "/listings/1", "/inbox", "/account", "/map", "/api/listings.geojson"]
     for path in pages:
         assert SECRET_EMAIL not in client.get(path).text, f"{path} leaked the address"
         assert "mailto:" not in client.get(path).text
