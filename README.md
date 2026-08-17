@@ -13,7 +13,9 @@ whatever the symbol on the bottom says. Mobile-first, low-bandwidth, and built t
 work as well on a cheap phone in Nairobi as on a laptop in Arcata.
 
 Server-rendered FastAPI + Jinja2 + Postgres. No frontend build step, no bundler, no
-node_modules. About 40 KB of hand-written CSS and JS on the wire.
+node_modules — the mobile-first, low-bandwidth goal above is easier to hold onto
+without one, and the whole CSS + JS footprint comfortably stays under 30 KB as a
+result.
 
 ---
 
