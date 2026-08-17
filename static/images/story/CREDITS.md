@@ -14,3 +14,12 @@ attribution; it's here anyway.
   cup, washed and set on a windowsill. Kept as-is, branding included — a truthful
   photo of containers the owner actually bought and emptied, not a stock image
   standing in for the idea.
+- **partners.jpg** — resized from ["Little Free Library box, Commodore John Rodgers
+  Elementary/Middle School"](https://www.flickr.com/photos/44034762@N04/52152654955)
+  by Baltimore Heritage on Flickr, [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+  Used on /partners rather than reusing for-organizations.jpg a second time — ties to
+  the "school... programs" line in that page's own copy, and has no third-party
+  branding visible (unlike a zero-waste shop storefront also considered, which had a
+  real business's name and logo front and center — too easily read as an implied
+  relationship that doesn't exist, the same reasoning that kept this page from naming
+  Zero Waste Humboldt specifically).
