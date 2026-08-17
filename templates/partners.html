@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ t('partners.title') }} · {{ settings.site_name }}{% endblock %}
+
+{% block content %}
+<h1 class="page-title">{{ t('partners.title') }}</h1>
+<p class="hint">{{ t('partners.intro') }}</p>
+
+<section class="story-section">
+  <h2>{{ t('partners.what_title') }}</h2>
+  <p>{{ t('partners.what_body') }}</p>
+</section>
+
+<section class="story-section">
+  <h2>{{ t('partners.not_yet_title') }}</h2>
+  <p>{{ t('partners.not_yet_body') }}</p>
+</section>
+
+<section class="hero-story">
+  <p class="hero-intro">{{ t('partners.cta_body') }}</p>
+  <a class="button button-secondary" href="/feedback">{{ t('partners.cta') }}</a>
+</section>
+{% endblock %}

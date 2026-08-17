@@ -489,6 +489,11 @@ def inbox(request: Request, user: User = Depends(require_user), db: Session = De
     return render(request, "inbox.html", {"messages": messages, "my_listings": mine})
 
 
+@router.get("/partners")
+def partners_page(request: Request):
+    return render(request, "partners.html")
+
+
 @router.get("/feedback")
 def feedback_form(request: Request):
     return render(request, "feedback.html")
