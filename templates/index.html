@@ -98,16 +98,10 @@
     <a class="button button-secondary" href="/feedback">{{ t('feedback.cta') }}</a>
   </section>
 
-  <section class="story-section story-section--media story-section--reverse">
-    <div class="story-media">
-      <img src="{{ static_url('images/story/for-organizations.jpg') }}" alt="{{ t('home.partners_image_alt') }}"
-           width="720" height="1130" loading="lazy">
-    </div>
-    <div class="story-copy">
-      <h2>{{ t('home.partners_title') }}</h2>
-      <p>{{ t('home.partners_body') }}</p>
-      <a class="button button-secondary" href="/partners">{{ t('home.partners_cta') }}</a>
-    </div>
+  <section class="story-section">
+    <h2>{{ t('home.partners_title') }}</h2>
+    <p>{{ t('home.partners_body') }}</p>
+    <a class="button button-secondary" href="/partners">{{ t('home.partners_cta') }}</a>
   </section>
 {% endif %}
 {% endblock %}
