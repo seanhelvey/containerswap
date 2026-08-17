@@ -391,4 +391,12 @@ textarea { min-height: 88px; resize: vertical; }
 .mini-map { height: 200px; border-radius: var(--radius); margin: 16px 0 4px; background: var(--bg); }
 .map-hint { text-align: center; }
 .leaflet-container { border-radius: var(--radius); font: inherit; }
+/* The site-wide `svg { width: 24px; height: 24px }` icon rule (above) has no
+   class to exclude Leaflet's own SVG layer, so without this it silently
+   crushes every marker pane down to 24x24 CSS pixels — the pane's internal
+   viewBox still thinks it's ~1000px wide, so every pin collapses to a
+   sub-pixel dot in the corner. Demo listings (rendered as circleMarkers, an
+   SVG shape) were invisible because of this; real listings use an <img>-based
+   marker and were never affected, which is why this went unnoticed. */
+.leaflet-container svg { width: auto; height: auto; }
 .map-results { margin-top: 16px; }

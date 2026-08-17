@@ -45,7 +45,7 @@ document.querySelectorAll('form[data-autosubmit] input').forEach((field) => {
 // form's hidden lat/lng and resubmits — a normal page load, sorted server-side,
 // same as any other filter. Already active: clear instead of re-locating, so
 // there is always a plain way back to newest-first.
-document.querySelectorAll('[data-near-me]').forEach((btn) => {
+document.querySelectorAll('[data-near-me-btn]').forEach((btn) => {
   const form = btn.closest('form');
   const latField = form.querySelector('input[name="lat"]');
   const lngField = form.querySelector('input[name="lng"]');
