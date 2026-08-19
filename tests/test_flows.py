@@ -902,3 +902,19 @@ def test_csp_allows_the_tile_host_the_javascript_actually_uses(client):
         if "tile.openstreetmap.org" not in source:
             continue
         assert "https://tile.openstreetmap.org" in img_src, f"{js} tiles blocked by CSP"
+
+
+def test_tile_requests_still_carry_a_referer(client):
+    """Regression (#34): OSM serves a "403r Access blocked" tile to requests with no
+    Referer, and our site-wide `same-origin` policy strips it from cross-origin
+    requests. Every tile layer has to opt back in per-element."""
+    from pathlib import Path
+
+    policy = client.get("/").headers["Referrer-Policy"]
+    if policy in ("no-referrer", "same-origin", "strict-origin", "origin"):
+        for js in ("map.js", "mini-map.js", "new-listing.js"):
+            source = Path("static/js", js).read_text()
+            if "tile.openstreetmap.org" not in source:
+                continue
+            assert "referrerPolicy" in source, f"{js} sends no Referer, OSM will 403r it"
+            assert "'no-referrer'" not in source, f"{js} explicitly suppresses the Referer"

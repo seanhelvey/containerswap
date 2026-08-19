@@ -13,6 +13,11 @@
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 18,
     attribution: '&copy; OpenStreetMap contributors',
+    // Our site-wide Referrer-Policy is same-origin, which strips the Referer
+    // from tile requests, and OSM blocks referer-less traffic (403r). The bare
+    // origin identifies the app without handing them listing paths or search
+    // terms, which the full URL would.
+    referrerPolicy: 'strict-origin-when-cross-origin',
   }).addTo(map);
 
   const params = new URLSearchParams();

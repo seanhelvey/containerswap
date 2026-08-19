@@ -58,6 +58,8 @@ if (pickEl && typeof L !== 'undefined') {
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 16,
     attribution: '&copy; OpenStreetMap contributors',
+    // Without this OSM blocks the tiles — see map.js.
+    referrerPolicy: 'strict-origin-when-cross-origin',
   }).addTo(pickMap);
 
   if (hasPoint) setPoint(startLat, startLng, false);
